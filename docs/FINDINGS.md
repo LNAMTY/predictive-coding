@@ -148,17 +148,31 @@ deviations of `ρ` from uniform, and diffusion is a low-pass filter on exactly t
 `κ` warm-up is a good idea whose precondition — "the density is a budget, not a signal" — silently
 fails on the transfer to classification.
 
-This is the single most important thing to know before putting In-Fluid-Net on a real dataset, and
-it is not something the toy experiment could have revealed.
+### ...but the residual formulation defuses it, and that is the more useful lesson
 
-**Two consequences for the design:**
+The table above is measured on the **raw** transport layer, whose output *is* `log ρ`. If you build
+the layer that way, `κ = 0.3` is fatal and so, frankly, is the layer: dropping a softmax-normalised
+density in where a hidden activation vector used to be sends MNIST to **~9%** (chance), *with or
+without* diffusion.
 
-1. `κ` defaults to **0** here, not 0.3.
-2. The transport layer is **residual**: it emits `x + gain · Δlog ρ`, with `gain` initialised to 0,
-   so switching the fluid on starts as the exact identity and the network opens the valve only
-   insofar as routing earns its keep. Without this, inserting the transport layer drops MNIST to
-   **~9%** (chance) regardless of κ, because a softmax-normalised density simply is not a
-   drop-in replacement for a hidden activation vector.
+So we made the layer **residual**: it emits `x + gain · Δlog ρ` with `gain` initialised to **0**.
+At initialisation it is exactly the identity; the network opens the valve only insofar as routing
+earns its keep. Now re-run the same `κ` sweep end-to-end (MNIST, 8k train, 3 epochs):
+
+| κ | test acc |
+|---|---|
+| 0.0 | 90.95 |
+| 0.1 | 91.00 |
+| 0.3 | 91.20 |
+
+**The `κ` catastrophe disappears entirely.** The identity path carries the signal, so diffusion can
+no longer destroy it — but by the same token diffusion is now doing nothing useful either.
+
+**The lesson is not "tune κ".** It is that *the residual wrapper is the thing that makes an
+incompressible transport layer safe to insert into a network at all*, and once you have it, the
+paper's κ schedule is neither dangerous nor helpful. Without it, no κ value saves you. This is the
+single most important thing to know before putting In-Fluid-Net on a real dataset, and the toy
+experiment could not have revealed it.
 
 ---
 
@@ -337,7 +351,7 @@ it will win, and win big.
 |---|---|
 | PC gradients match the global gradient at convergence | ⚠️ Only under the Fixed Prediction Assumption. Strict PC plateaus at cosine 0.985 and **decays to 0.76 by 8 layers**, costing 3.5 points of accuracy. |
 | Parameterise inside the divergence-free subspace; projection is a safety net | ✅ **Confirmed, emphatically.** The projector destroys **100%** of an ideal raw-gradient drift. A stream function retains 100% and makes the projector a no-op (and 3.3× faster). |
-| Anneal diffusion κ: 0.3 → 0 to "explore then sharpen" | ❌ **Does not transfer to classification.** There the density *is* the signal, and κ=0.3 drives a linear probe to chance in one step. Use κ=0. |
+| Anneal diffusion κ: 0.3 → 0 to "explore then sharpen" | ⚠️ **Does not transfer to classification** — there the density *is* the signal, and κ=0.3 drives a linear probe to chance in one step. A **residual** wrapper makes the layer safe and defuses κ entirely (and makes it pointless). |
 | Target CFL ∈ [0.3, 0.45] | ✅ **Confirmed** — and free to enforce exactly, since a per-sample rescale cannot introduce divergence. |
 | Local learning eliminates the backprop chain | ✅ **True, and verified in code** — we sabotage `torch.autograd` and train anyway. |
 | Incompressible transport beats undirected diffusion for routing | ✅ **Confirmed and quantified**: 54% of the budget delivered vs 0.05% for diffusion. |
