@@ -1,8 +1,8 @@
 """Predictive coding over a stack of arbitrary connections.
 
-Same algorithm as `core.py`, but each edge is a `Connection`, so a fluid transport
-layer can be inserted without the inference or learning rules changing at all.
-That is the design goal: `--fluid off` and `--fluid on` run the *same* PC code.
+Same algorithm as `core.py`, but each edge is a `Connection`, so the fluid transport
+layer can be inserted without the inference or learning rules changing. Runs with and
+without `--fluid` therefore exercise the same PC code.
 """
 
 from __future__ import annotations
@@ -73,7 +73,7 @@ class PCNetwork:
             states[-1] = states[-1] + cfg.output_nudge * (target - states[-1])
 
         preds = [self.conns[l].predict(ff[l]) for l in range(self.n_layers)] if fixed else None
-        # Under FPA the top-down signal is also evaluated at the feedforward state.
+        # Under the FPA the top-down signal is also evaluated at the feedforward state.
         vjp_at = ff if fixed else states
 
         if fixed:

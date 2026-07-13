@@ -1,9 +1,9 @@
 """The fluid transport layer, exposed as a predictive-coding connection.
 
-Everything the layer learns, it learns from `e` -- the prediction error measured
-at its own output -- plus its own transport/HJB regularisers. It never sees the
-task loss, the label, or any other layer's error. Remove this connection from the
-stack and the rest of the network is unchanged.
+The layer learns from `e`, the prediction error measured at its own output, plus its own
+transport and HJB regularisers. It never sees the task loss, the label, or any other
+layer's error. Removing this connection from the stack leaves the rest of the network
+unchanged.
 """
 
 from __future__ import annotations

@@ -2,16 +2,16 @@
 
     d(rho)/dt + div(rho * u) = kappa * lap(rho),     div(u) = 0
 
-Discretised with donor-cell (first-order upwind) fluxes. Two properties matter
-and both are structural rather than approximate:
+Discretised with donor-cell (first-order upwind) fluxes. Two properties hold
+structurally rather than approximately:
 
-  * Mass conservation. The update is a difference of face fluxes, so summing over
-    cells telescopes and only boundary fluxes survive. Those are zero (the stream
-    function is pinned on the border), so total mass is conserved to machine
-    precision. This is Lemma 7.1.
+  * Mass conservation (Lemma 7.1). The update is a difference of face fluxes, so
+    summing over cells telescopes and only boundary fluxes survive. Those are zero,
+    the stream function being pinned on the border, so total mass is conserved to
+    machine precision.
 
-  * Positivity. Upwind flux takes mass from the donor cell only, so under
-    CFL <= 1 no cell can be driven negative. "Mass" stays interpretable as mass.
+  * Positivity. Upwind flux takes mass from the donor cell only, so under CFL <= 1
+    no cell can be driven negative and rho remains interpretable as a mass.
 
 Diffusion uses the same Neumann Laplacian, which is also exactly conservative.
 """
@@ -72,8 +72,8 @@ def advect(
     if free_cell is not None:
         rho_new = rho_new * free_cell
 
-    # Upwind + CFL should already guarantee this; clamp defends against a caller
-    # that ignored the CFL bound rather than silently producing negative mass.
+    # Upwind fluxes under CFL <= 1 already guarantee this. The clamp is a guard against
+    # a caller that ignored the CFL bound, so mass never goes silently negative.
     return rho_new.clamp_min(0.0)
 
 
@@ -84,8 +84,8 @@ def total_mass(rho: Tensor) -> Tensor:
 def renormalise(rho: Tensor, eps: float = 1e-12) -> Tensor:
     """Restore a unit budget after a non-conservative step (e.g. a PC reaction).
 
-    Lemma 7.3: the PC reaction phase is locally non-conservative, so we renormalise
-    before the next transport step, which then conserves exactly.
+    Lemma 7.3: the PC reaction phase is locally non-conservative, so the budget is
+    restored before the next transport step, which then conserves exactly.
     """
     m = total_mass(rho).view(-1, 1, 1)
     return rho / (m + eps)
@@ -94,8 +94,8 @@ def renormalise(rho: Tensor, eps: float = 1e-12) -> Tensor:
 def kappa_schedule(step: int, total_steps: int, kappa0: float, warm_frac: float = 0.5) -> float:
     """Anneal diffusion kappa0 -> 0 over the first `warm_frac` of the rollout.
 
-    Section 8.1's "explore, then sharpen": early diffusion lets mass lift off the
-    seed and feel alternative routes; late diffusion would only blur the answer.
+    Section 8.1, "explore, then sharpen": early diffusion lets mass lift off the seed
+    and sample alternative routes, whereas late diffusion would only blur the answer.
     """
     if kappa0 <= 0:
         return 0.0

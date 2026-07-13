@@ -1,0 +1,17 @@
+[project]
+name = "influid-pc"
+version = "0.1.0"
+description = "Predictive coding without backpropagation, with In-Fluid-Net transport and HJB regularisation"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+exclude = [".venv", "data", "results", "figures"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+# `l` is the layer index throughout, matching the notation in the papers.
+ignore = ["E741"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

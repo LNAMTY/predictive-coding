@@ -48,7 +48,7 @@ class ModelSpec:
 
 
 def _obstacle_mask(grid: int) -> torch.Tensor:
-    """The paper's toy geometry: a pillar and a bar the flow must route around."""
+    """The paper's toy geometry: a pillar and a bar that the flow must route around."""
     m = torch.zeros(grid, grid, dtype=torch.bool)
     c = grid // 2
     m[grid // 4 : 3 * grid // 4, c : c + max(1, grid // 12)] = True

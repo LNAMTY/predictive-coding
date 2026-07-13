@@ -1,7 +1,8 @@
-"""Predictive coding must recover the backprop gradient from purely local signals.
+"""Whether predictive coding recovers the backprop gradient from purely local signals.
 
-This is the load-bearing claim of the whole "training without backpropagation"
-story, so it gets a test, not a paragraph.
+Under the Fixed Prediction Assumption it does, and the cosine approaches 1 as the output
+nudge shrinks. Under strict PC it does not, and the misalignment plateaus. See
+docs/FINDINGS.md.
 """
 
 import pytest
@@ -36,7 +37,7 @@ def _batch(net, b=16):
 
 
 def test_backprop_reference_matches_autograd():
-    """Our hand-written backward sweep must agree with autograd, or it proves nothing."""
+    """The hand-written backward sweep must agree with autograd to be a valid reference."""
     net = _net()
     x, t = _batch(net)
 
@@ -57,7 +58,7 @@ def test_backprop_reference_matches_autograd():
 def test_fixed_prediction_pc_recovers_backprop_exactly():
     """Under the Fixed Prediction Assumption, gamma -> 0 drives cosine(PC, BP) -> 1.
 
-    This is the paper's envelope theorem, and it does hold -- in this regime.
+    The paper's envelope theorem holds in this regime.
     """
     net = _net(mode="fixed")
     x, t = _batch(net, b=64)
@@ -70,12 +71,12 @@ def test_fixed_prediction_pc_recovers_backprop_exactly():
 
 
 def test_strict_pc_does_not_recover_backprop_even_as_nudge_shrinks():
-    """Strict PC converges, but to a fixed point that is NOT the backprop gradient.
+    """Strict PC converges, but to a fixed point that is not the backprop gradient.
 
     The residual misalignment is structural: at the fixed point the hidden-state
-    displacement and the error signal are both O(gamma), so relaxing the states
-    perturbs the top-down prediction at the same order as the signal it carries.
-    Shrinking gamma therefore does not close the gap -- it plateaus.
+    displacement and the error signal are both O(gamma), so relaxing the states perturbs
+    the top-down prediction at the same order as the signal it carries. Shrinking gamma
+    therefore does not close the gap, and the cosine plateaus instead.
     """
     net = _net(mode="strict")
     x, t = _batch(net, b=64)
@@ -101,9 +102,9 @@ def test_more_inference_steps_improve_alignment():
 def test_free_energy_decreases_during_inference():
     """Only strict PC is gradient descent on the free energy.
 
-    Under the Fixed Prediction Assumption the predictions do not depend on the
-    states, so the relaxation is not descending any energy -- it is a bespoke
-    error-propagation rule that happens to land on the backprop gradient.
+    Under the Fixed Prediction Assumption the predictions do not depend on the states, so
+    the relaxation descends no energy: it is an error-propagation rule that happens to
+    land on the backprop gradient.
     """
     torch.manual_seed(1)
     net = _net(nudge=1.0, steps=100, mode="strict")

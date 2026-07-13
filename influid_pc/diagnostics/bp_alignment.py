@@ -1,23 +1,21 @@
-"""Does predictive coding actually compute the backprop gradient?
+"""Measures how closely a predictive-coding update tracks the backprop gradient.
 
-The paper claims an envelope theorem: "predictive coding gradients match the global
-objective gradient at convergence". That is an empirical claim and it is testable,
-so we test it instead of believing it.
+The paper claims an envelope theorem: predictive-coding gradients match the global
+objective gradient at convergence. This module tests that claim. Holding one set of
+weights, on a single batch, it computes:
 
-We hold one set of weights and, on the same batch, compute:
-
-  * the gradient backprop would produce,  dL/dW_l, by an explicit (hand-written)
+  * the gradient backprop would produce, dL/dW_l, by an explicit hand-written
     backward sweep over the same architecture;
   * the update predictive coding produces from purely local quantities, after n
-    steps of inference relaxation.
+    steps of inference relaxation;
 
-Then we report the cosine similarity and the relative magnitude, per layer, as a
-function of inference steps and of the output nudge gamma.
+and reports the cosine similarity and relative magnitude per layer, as a function of
+inference steps and of the output nudge gamma.
 
-Theory (Millidge et al. 2020) says the PC fixed point satisfies the same error
-recursion as backprop, e_l = -delta_l, so cosine -> 1 as gamma -> 0 and steps ->
-inf. What that costs in practice, and how it degrades with depth and with a
-finite nudge, is what this module measures.
+Theory (Millidge et al. 2020) holds that the PC fixed point satisfies the same error
+recursion as backprop, e_l = -delta_l, so the cosine should approach 1 as gamma -> 0
+and steps -> inf. How that degrades with depth and with a finite nudge is what these
+functions measure.
 """
 
 from __future__ import annotations
@@ -33,9 +31,9 @@ from ..pc.core import PredictiveCodingNet
 def backprop_gradients(net: PredictiveCodingNet, x: Tensor, target: Tensor) -> List[Tensor]:
     """Explicit backward sweep for L = 0.5 * ||a_L - target||^2, mean over batch.
 
-    Deliberately hand-written rather than autograd: it must use exactly the same
-    forward equations as `PredictiveCodingNet`, so the comparison is apples to
-    apples and not a comparison of two different models.
+    Hand-written rather than autograd so that it uses exactly the same forward
+    equations as `PredictiveCodingNet`, making the comparison one of two learning
+    rules on one model rather than of two different models.
     """
     act = net.act
     batch = x.shape[0]
@@ -116,7 +114,7 @@ def nudge_sweep(
     nudges: Sequence[float] = (1.0, 0.5, 0.2, 0.1, 0.05, 0.02),
     steps: int = 64,
 ) -> List[Dict[str, object]]:
-    """Alignment as the output nudge gamma shrinks: the theoretical limit gamma -> 0."""
+    """Alignment as the output nudge gamma shrinks toward the theoretical limit."""
     bp = backprop_gradients(net, x, target)
     flat_bp = torch.cat([g.flatten() for g in bp])
 

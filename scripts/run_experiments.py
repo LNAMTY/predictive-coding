@@ -1,11 +1,10 @@
 """The full experiment grid. Writes one JSON per run into results/.
 
-  exp1  depth:      does the strict-PC gradient decay (see alignment_study) actually
-                    cost accuracy as the network gets deeper? PC-strict vs PC-fixed vs BP.
-  exp2  classes:    predictive coding across different numbers of classes (the task's
-                    "different classification" on MNIST: k = 2, 3, 5, 10).
-  exp3  transfer:   a non-MNIST dataset with a different class count -- EMNIST-Letters,
-                    26 classes -- with and without the fluid transport layer.
+  exp1  depth:      whether the strict-PC gradient decay (see alignment_study) costs
+                    accuracy as the network deepens. PC-strict vs PC-fixed vs BP.
+  exp2  classes:    predictive coding across class counts on MNIST (k = 2, 3, 5, 10).
+  exp3  transfer:   a non-MNIST dataset with a different class count (EMNIST-Letters,
+                    26 classes), with and without the fluid transport layer.
   exp4  fluid:      ablations of the In-Fluid-Net machinery itself.
 
 Run:  PYTHONPATH=. .venv/bin/python scripts/run_experiments.py [exp1 exp2 ...]
@@ -51,7 +50,7 @@ def run(tag: str, **flags) -> None:
     print(f"  done {tag}: {acc:.2f}%  ({time.time()-t0:.0f}s)")
 
 
-# -- exp1: does misaligned gradient cost accuracy as depth grows? --------------
+# -- exp1: accuracy cost of gradient misalignment as depth grows ---------------
 
 def exp1_depth() -> None:
     print("[exp1] depth: strict vs fixed vs backprop")
@@ -97,14 +96,14 @@ def exp3_transfer() -> None:
     run("exp3-emnist-pc-fluid-hjb", learner="pc", prediction_mode="fixed", epochs=4,
         fluid=True, fluid_lr=0.01, hjb=True, **common)
 
-    # Same comparison on Fashion-MNIST, to show it is not an EMNIST artefact.
+    # Same comparison on Fashion-MNIST, to check it is not an EMNIST artefact.
     fcommon = dict(common, dataset="fashion")
     run("exp3-fashion-pc", learner="pc", prediction_mode="fixed", epochs=8, **fcommon)
     run("exp3-fashion-pc-fluid", learner="pc", prediction_mode="fixed", epochs=4,
         fluid=True, fluid_lr=0.01, **fcommon)
 
 
-# -- exp4: what inside In-Fluid-Net actually matters? --------------------------
+# -- exp4: In-Fluid-Net ablations ----------------------------------------------
 
 def exp4_fluid() -> None:
     print("[exp4] fluid ablations")
@@ -115,14 +114,14 @@ def exp4_fluid() -> None:
     )
     run("exp4-base", **base)
 
-    # The paper's recommended diffusion warmup, which we expect to be harmful here.
+    # The paper's recommended diffusion warmup.
     for kappa in (0.0, 0.1, 0.3):
         run(f"exp4-kappa{kappa}", **dict(base, fluid_kappa=kappa))
 
-    # The residual wrapper -- the thing that makes the layer safe to insert at all.
+    # The residual wrapper, which is what makes the layer safe to insert at all.
     run("exp4-no-residual", **dict(base, no_residual=True, readout="log"))
 
-    # CFL band: too small and nothing moves, too large and the integrator suffers.
+    # CFL band: too small and nothing moves, too large and the integrator degrades.
     for cfl in (0.05, 0.9):
         run(f"exp4-cfl{cfl}", **dict(base, fluid_cfl=cfl))
 
@@ -130,17 +129,16 @@ def exp4_fluid() -> None:
     run("exp4-hjb", **dict(base, hjb=True))
     run("exp4-obstacles", **dict(base, obstacles=True))
 
-    # NOT run end-to-end: `velocity_mode="value"` and `projection=True`.
+    # Not run end-to-end: velocity_mode="value" and projection=True.
     #
-    # Both force a Poisson solve, and under the Fixed Prediction Assumption every one
-    # of the 24 inference steps asks for a VJP, each of which costs another solve in
-    # the projector's backward. The run is ~20x slower than the rest of this grid and
-    # tells us nothing new: the raw-gradient drift is *annihilated* by the projector
-    # (retained_energy = 0.0000, measured directly in the layer), so the transport term
-    # is identically zero and the residual layer degenerates to the identity. The
-    # collapse is demonstrated far more sharply in scripts/routing_task.py, where the
-    # same drift -- built from the *ideal* value function -- delivers 0.0000 band mass
-    # against the stream function's 0.5400.
+    # Both force a Poisson solve, and under the Fixed Prediction Assumption each of the
+    # 24 inference steps asks for a VJP, costing another solve in the projector's
+    # backward. That is ~20x slower than the rest of this grid for no new information:
+    # the projector annihilates the raw-gradient drift (retained_energy = 0.0000,
+    # measured in the layer), the transport term is identically zero, and the residual
+    # layer degenerates to the identity. scripts/routing_task.py shows the collapse more
+    # sharply, where the same drift, built from the ideal value function, delivers
+    # 0.0000 band mass against the stream function's 0.5400.
 
 
 EXPERIMENTS = {

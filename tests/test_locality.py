@@ -1,14 +1,13 @@
-"""Prove there is no backpropagation, rather than asserting it in a comment.
+"""Checks that no backpropagation takes place anywhere in the PC path.
 
-"Trains without backprop" is the central claim, and it is the kind of claim that is
-easy to make and easy to quietly violate (one stray `.backward()` inside a helper and
-the whole thing is a lie). So we check it three ways:
+A single stray `.backward()` in a helper would invalidate the central claim, so it is
+checked three ways:
 
-  1. autograd is *physically unavailable* -- we sabotage torch.autograd and
-     torch.Tensor.backward, then train anyway;
+  1. autograd is made unavailable (torch.autograd and torch.Tensor.backward are
+     patched to raise) and the network is trained anyway;
   2. no tensor in the PC path carries a computation graph;
-  3. a layer's update is invariant to non-adjacent layers' errors -- credit is
-     genuinely local, not a backward chain in disguise.
+  3. a layer's update is invariant to non-adjacent layers' errors, so credit
+     assignment is local rather than a backward chain in disguise.
 """
 
 import pytest
@@ -35,7 +34,7 @@ def _batch(n=16, d=64, k=5):
 
 @pytest.mark.parametrize("mode", ["strict", "fixed"])
 def test_training_works_with_autograd_sabotaged(monkeypatch, mode):
-    """The strongest form of the claim: break backprop, then train to convergence anyway."""
+    """Make autograd raise on use, then train to convergence regardless."""
 
     def explode(*a, **k):
         raise AssertionError("backpropagation was used")

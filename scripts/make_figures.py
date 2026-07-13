@@ -1,7 +1,7 @@
 """Figures for the report. Reads results/*.json, writes figures/*.png.
 
-Palette is the validated categorical set (blue / red / violet / aqua); every series
-is also direct-labelled, so identity never rests on colour alone.
+Every series is direct-labelled as well as coloured, so it stays readable in greyscale
+and to colour-blind readers.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ def _finish(ax, grid_axis="y"):
     ax.set_axisbelow(True)
 
 
-# -- figure 1: does PC compute the backprop gradient? -------------------------
+# -- figure 1: alignment between the PC update and the backprop gradient ------
 
 def fig_alignment() -> None:
     d = _load("alignment")
@@ -76,7 +76,7 @@ def fig_alignment() -> None:
     ax.set_xlabel(r"output nudge $\gamma$  (smaller $\rightarrow$ theory's limit)")
     ax.set_ylabel(r"cosine(PC update, BP gradient)")
     ax.set_title("(a) The envelope theorem holds\nonly with fixed predictions")
-    # The whole story lives in the last 4% of the range; a 0-1 axis would hide it.
+    # The separation lives in the last 4% of the range; a 0-1 axis would hide it.
     ax.set_ylim(0.955, 1.004)
     ax.axhline(1.0, color=MUTED, ls=":", lw=1, zorder=1)
     ax.annotate("fixed → 1.000", (0.001, 0.9995), color=BLUE, fontsize=9,
@@ -97,7 +97,7 @@ def fig_alignment() -> None:
     ax.axhline(1.0, color=MUTED, ls=":", lw=1, zorder=1)
     _finish(ax)
 
-    # (c) depth -- the headline
+    # (c) depth
     ax = axes[2]
     for mode, c in (("strict", RED), ("fixed", BLUE)):
         x, y = series(d["depth"], "hidden_layers", mode)
@@ -117,7 +117,8 @@ def fig_alignment() -> None:
         ax.legend(frameon=False, loc="lower right")
 
     fig.suptitle(
-        "Predictive coding recovers the backprop gradient — but only under the Fixed Prediction Assumption",
+        "Predictive coding recovers the backprop gradient\n"
+        "— but only under the Fixed Prediction Assumption",
         fontsize=12, fontweight="bold", y=1.04,
     )
     fig.tight_layout()
@@ -126,7 +127,7 @@ def fig_alignment() -> None:
     print("  wrote fig1_alignment.png")
 
 
-# -- figure 2: does misalignment cost accuracy? -------------------------------
+# -- figure 2: accuracy cost of the misalignment ------------------------------
 
 def fig_depth_accuracy() -> None:
     depths = [1, 2, 3, 4, 6]
@@ -182,7 +183,7 @@ def fig_depth_accuracy() -> None:
     print("  wrote fig2_depth_accuracy.png")
 
 
-# -- figure 3: the fluid layer, doing its job ---------------------------------
+# -- figure 3: transport invariants of the fluid layer ------------------------
 
 def fig_fluid() -> None:
     import torch.nn.functional as F
@@ -242,7 +243,8 @@ def fig_fluid() -> None:
                 ax.imshow(np.ma.masked_where(~blocked, blocked.astype(float)),
                           cmap="gray_r", vmin=0, vmax=1, interpolation="nearest")
             ax.set_title(f"t={t}" + ("  (input)" if t == 0 else ""), fontsize=9)
-            ax.set_xticks([]); ax.set_yticks([])
+            ax.set_xticks([])
+            ax.set_yticks([])
             if k == 0:
                 ax.set_ylabel(title, fontsize=10, fontweight="bold")
 
@@ -252,15 +254,19 @@ def fig_fluid() -> None:
         if blocked.any():
             ax.imshow(np.ma.masked_where(~blocked, blocked.astype(float)),
                       cmap="gray_r", vmin=0, vmax=1, interpolation="nearest")
-        ax.set_xlim(0, G - 1); ax.set_ylim(G - 1, 0)
+        ax.set_xlim(0, G - 1)
+        ax.set_ylim(G - 1, 0)
         ax.set_title(
-            f"velocity  |  div={stats['div_final']:.1e}\nCFL={stats['cfl']:.2f}  kept={stats['retained_energy']:.2f}",
+            f"velocity  |  div={stats['div_final']:.1e}\n"
+            f"CFL={stats['cfl']:.2f}  kept={stats['retained_energy']:.2f}",
             fontsize=9,
         )
-        ax.set_xticks([]); ax.set_yticks([])
+        ax.set_xticks([])
+        ax.set_yticks([])
 
     fig.suptitle(
-        "Incompressible transport of a conserved activation budget (mass drift < 1e-6, div u ≈ 1e-6)",
+        "Incompressible transport of a conserved activation budget\n"
+        "(mass drift < 1e-6, div u ≈ 1e-6)",
         fontsize=12, fontweight="bold", y=1.0,
     )
     fig.tight_layout()
@@ -269,18 +275,21 @@ def fig_fluid() -> None:
     print("  wrote fig3_fluid_transport.png")
 
 
-# -- figure 4: what inside In-Fluid-Net actually matters? ---------------------
+# -- figure 4: In-Fluid-Net ablations -----------------------------------------
 
 def fig_ablation() -> None:
+    # Colour follows the result, not the expectation: MUTED where the knob turns out to
+    # make no difference, BLUE/RED only for the one contrast that actually decides the
+    # layer's fate.
     rows = [
-        ("kappa = 0 (ours)", "exp4-kappa0.0", BLUE),
+        ("kappa = 0 (default)", "exp4-kappa0.0", MUTED),
         ("kappa = 0.1", "exp4-kappa0.1", MUTED),
-        ("kappa = 0.3 (paper)", "exp4-kappa0.3", RED),
-        ("stream (solenoidal)", "exp4-base", BLUE),
-        ("value + projection", "exp4-velocity-value", RED),
+        ("kappa = 0.3 (paper)", "exp4-kappa0.3", MUTED),
         ("CFL 0.05", "exp4-cfl0.05", MUTED),
-        ("CFL 0.4", "exp4-cfl0.4", BLUE),
+        ("CFL 0.4 (default)", "exp4-base", MUTED),
         ("CFL 0.9", "exp4-cfl0.9", MUTED),
+        ("HJB regulariser", "exp4-hjb", MUTED),
+        ("obstacles", "exp4-obstacles", MUTED),
         ("residual readout", "exp4-base", BLUE),
         ("replace readout", "exp4-no-residual", RED),
     ]
@@ -304,7 +313,11 @@ def fig_ablation() -> None:
     ax.set_yticklabels(names, fontsize=9)
     ax.set_xlabel("test accuracy (%)")
     ax.set_xlim(0, max(vals) * 1.18)
-    ax.set_title("What actually matters inside the transport layer", loc="left")
+    ax.set_title(
+        "Inside the transport layer, only the residual wrapper decides anything\n"
+        "(MNIST, 3 epochs; diffusion, CFL and obstacles are within noise, HJB costs ~1 point)",
+        loc="left", fontsize=11,
+    )
     _finish(ax, grid_axis="x")
 
     fig.tight_layout()

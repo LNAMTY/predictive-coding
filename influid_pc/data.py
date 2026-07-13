@@ -1,15 +1,10 @@
 """Datasets, with the class count as a first-class knob.
 
-The assignment asks for two separable things:
+Every dataset exposes `num_classes`, and `--num-classes k` subsets any of them down to
+k labels, which is what supports the sweep over class counts.
 
-  * predictive coding across *different numbers of classes* (MNIST is 10);
-  * the Navier-Stokes variant on a dataset that is *not* MNIST and has a
-    different class count.
-
-So every dataset here exposes `num_classes`, and `--num-classes k` will subset any
-of them down to k labels. EMNIST-Letters (26) is the default non-MNIST target: it
-is a different dataset *and* a different class count, while staying 28x28
-greyscale so the fluid grid machinery transfers without reshaping.
+EMNIST-Letters (26) is the default non-MNIST target: a different dataset and a different
+class count, but still 28x28 greyscale, so the fluid grid transfers without reshaping.
 """
 
 from __future__ import annotations
@@ -99,8 +94,8 @@ def load(
         idx = torch.randperm(len(xte), generator=g)[:test_subset]
         xte, yte = xte[idx], yte[idx]
 
-    # Standardise: PC relaxation is sensitive to input scale, and an unnormalised
-    # input silently changes the effective inference learning rate.
+    # PC relaxation is sensitive to input scale: an unnormalised input silently changes
+    # the effective inference learning rate.
     mean, std = xtr.mean(), xtr.std().clamp_min(1e-6)
     xtr, xte = (xtr - mean) / std, (xte - mean) / std
 

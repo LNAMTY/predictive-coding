@@ -10,7 +10,7 @@ Every number below is reproducible from this repo — the command is given with 
 
 The paper's abstract promises "an envelope theorem proving that predictive coding gradients
 match the global objective gradient at convergence" (also §4.3: `ΔW ∝ −∂Φ/∂W`, computed from
-local quantities only). This is a testable claim, so we tested it instead of believing it.
+local quantities only). That is a testable claim, and this section tests it.
 
 For a fixed set of weights and one batch, we compute two things and take the cosine between them:
 
@@ -347,15 +347,15 @@ it will win, and win big.
 
 ## Summary for the research programme
 
-| the paper says | we find |
-|---|---|
-| PC gradients match the global gradient at convergence | ⚠️ Only under the Fixed Prediction Assumption. Strict PC plateaus at cosine 0.985 and **decays to 0.76 by 8 layers**, costing 3.5 points of accuracy. |
-| Parameterise inside the divergence-free subspace; projection is a safety net | ✅ **Confirmed, emphatically.** The projector destroys **100%** of an ideal raw-gradient drift. A stream function retains 100% and makes the projector a no-op (and 3.3× faster). |
-| Anneal diffusion κ: 0.3 → 0 to "explore then sharpen" | ⚠️ **Does not transfer to classification** — there the density *is* the signal, and κ=0.3 drives a linear probe to chance in one step. A **residual** wrapper makes the layer safe and defuses κ entirely (and makes it pointless). |
-| Target CFL ∈ [0.3, 0.45] | ✅ **Confirmed** — and free to enforce exactly, since a per-sample rescale cannot introduce divergence. |
-| Local learning eliminates the backprop chain | ✅ **True, and verified in code** — we sabotage `torch.autograd` and train anyway. |
-| Incompressible transport beats undirected diffusion for routing | ✅ **Confirmed and quantified**: 54% of the budget delivered vs 0.05% for diffusion. |
-| (implied) this should make a better network | ❌ **Not at classification.** At matched capacity a plain MLP beats the fluid layer at 1/20th the cost. HJB regularisation makes it worse still. |
+| the paper says | verdict | we find |
+|---|---|---|
+| PC gradients match the global gradient at convergence | **partly** | Only under the Fixed Prediction Assumption. Strict PC plateaus at cosine 0.985 and **decays to 0.76 by 8 layers**, costing 3.5 points of accuracy. |
+| Parameterise inside the divergence-free subspace; projection is a safety net | **confirmed** | Emphatically. The projector destroys **100%** of an ideal raw-gradient drift. A stream function retains 100% and makes the projector a no-op (and 3.3× faster). |
+| Anneal diffusion κ: 0.3 → 0 to "explore then sharpen" | **does not transfer** | Not to classification, where the density *is* the signal, and κ=0.3 drives a linear probe to chance in one step. A **residual** wrapper makes the layer safe and defuses κ entirely (and makes it pointless). |
+| Target CFL ∈ [0.3, 0.45] | **confirmed** | And free to enforce exactly, since a per-sample rescale cannot introduce divergence. |
+| Local learning eliminates the backprop chain | **confirmed** | Verified in code: `torch.autograd` is patched to raise and the network trains anyway. |
+| Incompressible transport beats undirected diffusion for routing | **confirmed** | Quantified: 54% of the budget delivered vs 0.05% for diffusion. |
+| (implied) this should make a better network | **not at classification** | At matched capacity a plain MLP beats the fluid layer at 1/20th the cost. HJB regularisation makes it worse still. |
 
 **The two things worth acting on:**
 

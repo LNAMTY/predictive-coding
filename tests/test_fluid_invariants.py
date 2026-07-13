@@ -1,4 +1,5 @@
-"""The invariants the whole fluid story rests on. If these fail, nothing above them means anything."""
+"""Structural invariants of the transport layer: incompressibility, mass conservation,
+positivity, no-through obstacles, CFL targeting, and the projector's backward pass."""
 
 import torch
 
@@ -89,7 +90,7 @@ def test_leray_projection_removes_divergence():
 
 
 def test_projection_annihilates_a_pure_gradient_field():
-    """The paper's warning, made concrete: project a raw gradient and almost nothing survives."""
+    """The paper's warning: project a raw gradient field and almost nothing survives."""
     from influid_pc.fluid.operators import gradient
 
     phi = torch.randn(B, H, W, dtype=torch.float64)
@@ -99,11 +100,11 @@ def test_projection_annihilates_a_pure_gradient_field():
 
 
 def test_leray_custom_backward_matches_autograd_through_the_solver():
-    """The projector has a hand-written backward. Check it against finite differences.
+    """The projector has a hand-written backward, checked here against finite differences.
 
-    Not against autograd-through-the-solver: that is a *reference*, not the truth, and
-    an early-terminating CG loop does not necessarily differentiate to the right thing.
-    Finite differences is the ground truth, so that is what we compare to.
+    Not against autograd-through-the-solver: an early-terminating CG loop does not
+    necessarily differentiate to the right thing, so it is a reference rather than the
+    ground truth. Finite differences is the ground truth.
     """
     from influid_pc.fluid.projection import _project_raw, _zero_boundary_faces, leray_project
 

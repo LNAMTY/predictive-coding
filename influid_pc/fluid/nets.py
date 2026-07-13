@@ -1,11 +1,11 @@
-"""Small conv nets that produce the two fields the transport layer needs.
+"""Small conv nets producing the two fields the transport layer needs.
 
-StreamNet emits psi on grid *nodes* ((G+1)x(G+1)), because u = curl(psi) then lands
-exactly on the faces where the advection scheme wants it. The final conv uses
-kernel 2 with padding 1, which takes GxG to (G+1)x(G+1) with no interpolation.
+StreamNet emits psi on grid nodes, (G+1)x(G+1), so that u = curl(psi) lands exactly on
+the faces where the advection scheme expects it. The final conv uses kernel 2 with
+padding 1, taking GxG to (G+1)x(G+1) with no interpolation.
 
-ValueNet emits W on grid *cells* (GxG): the value/desirability landscape whose
-negative gradient is the raw drift, and on which the HJB residual is evaluated.
+ValueNet emits W on grid cells, GxG: the value landscape whose negative gradient is the
+raw drift, and on which the HJB residual is evaluated.
 """
 
 from __future__ import annotations

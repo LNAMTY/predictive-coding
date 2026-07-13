@@ -65,11 +65,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--fluid-dt", type=float, default=0.5)
     p.add_argument("--fluid-cfl", type=float, default=0.4)
     p.add_argument("--fluid-kappa", type=float, default=0.0,
-                   help="diffusion warmup; the paper suggests 0.3, we find 0 is right here")
+                   help="diffusion warmup; the paper suggests 0.3, but 0 is better here")
     p.add_argument("--fluid-lr", type=float, default=1e-3)
     p.add_argument("--velocity-mode", default="stream", choices=["stream", "value"])
     p.add_argument("--projection", action="store_true",
-                   help="run the Leray safety net every step; a no-op in stream mode, so off by default")
+                   help="run the Leray safety net every step; a no-op in stream mode")
     p.add_argument("--readout", default="scaled", choices=["scaled", "log"])
     p.add_argument("--obstacles", action="store_true")
     p.add_argument("--no-residual", action="store_true",
@@ -154,9 +154,9 @@ def _train_bp_once(args, bundle, lr: float) -> Dict[str, object]:
 def train_bp(args, bundle) -> Dict[str, object]:
     """Backprop reference: same architecture, same MSE-on-one-hot loss.
 
-    Backprop gets the *best of a learning-rate sweep*, while PC runs at a single
-    fixed setting. The comparison should not be won by handing the baseline a
-    learning rate that diverges -- at depth 1, lr=0.1 does exactly that.
+    Backprop gets the best of a learning-rate sweep while PC runs at a single fixed
+    setting. Without this the comparison can be won by handing the baseline a learning
+    rate that diverges, which is what lr=0.1 does at depth 1.
     """
     candidates = sorted({args.weight_lr, 0.1, 0.05, 0.02, 0.01}, reverse=True)
     runs = []

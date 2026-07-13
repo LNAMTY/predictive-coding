@@ -8,16 +8,16 @@ an incompressible velocity field, and advects the budget for T steps:
     rho_t+1 = advect(rho_t, u, dt, kappa(t))
     out     = readout(rho_T)
 
-Two ways to build u, and the difference between them is the paper's central
+There are two ways to build u, and the difference between them is the paper's central
 practical lesson (secs 1.3, 2.1.3, 8.7):
 
-  velocity_mode="stream"  u = curl(psi_theta), divergence-free *by construction*.
-  velocity_mode="value"   u = Leray_project(-grad W_theta), the naive route: build
-                          a raw gradient field, then project the divergence out.
+  velocity_mode="stream"  u = curl(psi_theta), divergence-free by construction.
+  velocity_mode="value"   u = Leray_project(-grad W_theta): build a raw gradient field,
+                          then project the divergence out.
 
-The paper predicts the second collapses, because a Leray projector is precisely
-the operator that annihilates gradient fields. We implement both so that we can
-measure the collapse (`retained_energy`) rather than assert it.
+The paper predicts the second collapses, a Leray projector being the operator that
+annihilates gradient fields. Both are implemented here so that the collapse can be
+measured via `retained_energy`.
 """
 
 from __future__ import annotations
@@ -75,9 +75,9 @@ class IncompressibleRouting(nn.Module):
         self.kappa_warm_frac = kappa_warm_frac
         self.velocity_mode = velocity_mode
         # A raw gradient drift has divergence by definition, so "value" mode is only
-        # meaningful with the projector attached. In "stream" mode the field is
-        # already solenoidal and the projector is an expensive no-op, so it stays
-        # opt-in (and we audit the divergence instead of paying for it every step).
+        # meaningful with the projector attached. In "stream" mode the field is already
+        # solenoidal and the projector is an expensive no-op, so it stays opt-in and
+        # the divergence is audited instead.
         self.use_projection = use_projection or velocity_mode == "value"
         self.use_hjb = use_hjb
         self.hjb_weight = hjb_weight
@@ -89,9 +89,8 @@ class IncompressibleRouting(nn.Module):
         self.residual = residual
 
         # Residual mode: the layer emits x + gain * (transport-induced change in
-        # log-density). At gain=0 it is exactly the identity, so switching the
-        # fluid on cannot destroy the representation before it has learned to
-        # route -- the network opens the valve only insofar as routing helps.
+        # log-density). At gain=0 this is exactly the identity, so enabling the fluid
+        # cannot destroy the representation before the layer has learned to route.
         self.gain = nn.Parameter(torch.zeros(1))
 
         if velocity_mode == "stream":
@@ -101,8 +100,8 @@ class IncompressibleRouting(nn.Module):
         else:
             raise ValueError(f"unknown velocity_mode {velocity_mode!r}")
 
-        # An HJB value field can accompany either drift: in "value" mode it *is*
-        # the drift, in "stream" mode it is an auxiliary critic shaping the flow.
+        # An HJB value field can accompany either drift: in "value" mode it is the
+        # drift, in "stream" mode it is an auxiliary critic shaping the flow.
         if use_hjb and velocity_mode != "value":
             self.value = ValueNet(1, width)
 
@@ -142,11 +141,11 @@ class IncompressibleRouting(nn.Module):
         retained = float(proj_energy / (raw_energy + 1e-12))
         stats["retained_energy"] = retained
 
-        # If the projector annihilated the drift (which is what it does to a raw
-        # gradient field), what is left is floating-point noise. Rescaling *that* to
-        # hit a target Courant number amplifies it by ~1e9 and hands back a "velocity"
-        # that is not even divergence-free -- measured: div 0.96 versus 6e-07 for a
-        # stream function. The CFL step is only safe on a field that actually exists.
+        # If the projector annihilated the drift, as it does to a raw gradient field,
+        # all that remains is floating-point noise. Rescaling that to hit a target
+        # Courant number amplifies it by ~1e9 and returns a field that is not even
+        # divergence-free (measured: div 0.96, against 6e-07 for a stream function).
+        # The CFL step is only safe on a field with real energy in it.
         collapsed = retained < 1e-6
         stats["collapsed"] = float(collapsed)
         if collapsed:
@@ -201,8 +200,8 @@ class IncompressibleRouting(nn.Module):
 
         if self.residual:
             # Transport expressed as a change in log-density, added back to the input.
-            # log softmax(beta*x) = beta*x - logsumexp, so at gain=0 and zero
-            # velocity this reduces to the identity map on x.
+            # Since log softmax(beta*x) = beta*x - logsumexp, at gain=0 and zero velocity
+            # this reduces to the identity map on x.
             delta = rho.clamp_min(1e-12).log() - rho0.clamp_min(1e-12).log()
             return x + self.gain * delta.reshape(b, -1)
 
@@ -239,9 +238,9 @@ class IncompressibleRouting(nn.Module):
     def _pending_error_grid(self, rho: Tensor) -> Tensor:
         """The HJB cost is only defined during a local update, when an error exists.
 
-        `forward` also runs during plain prediction (and on the last, ragged batch),
-        so a stale or wrongly-shaped error must fall back to zero cost rather than
-        silently reshaping someone else's error into this batch.
+        `forward` also runs during plain prediction, and on the last ragged batch, so a
+        stale or wrongly shaped error falls back to zero cost rather than reshaping
+        another batch's error into this one.
         """
         e = getattr(self, "_error_grid", None)
         if e is None or e.shape[0] != rho.shape[0] or e.numel() != rho.numel():

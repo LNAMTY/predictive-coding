@@ -18,9 +18,9 @@ Learning (slow, weights move, states frozen):
     dF/dW_l = -e_{l+1} @ f(a_l)^T          <- purely local: pre-synaptic activity
     W_l <- W_l + lr * e_{l+1} @ f(a_l)^T      times post-synaptic error
 
-No autograd, no backward chain: every update above touches only quantities that
-live on the two layers a synapse connects. That is the whole point, and it is
-what `diagnostics/bp_alignment.py` independently verifies against true backprop.
+Every update above touches only quantities that live on the two layers a synapse
+connects, so no autograd and no backward chain is needed. `diagnostics/bp_alignment.py`
+measures how close the result is to a true backprop gradient.
 """
 
 from __future__ import annotations
@@ -43,22 +43,19 @@ class PCConfig:
     weight_lr: float = 1e-3
     momentum: float = 0.9
     weight_decay: float = 0.0
-    # Initialise hidden states with a feedforward sweep instead of zeros.
-    # This is what makes PC converge in few steps.
+    # Feedforward sweep rather than zeros; converges in far fewer inference steps.
     ff_init: bool = True
-    # Scales the output-layer error during training. gamma -> 0 recovers the
-    # "infinitesimal nudge" regime where PC provably equals backprop.
+    # Scales the output-layer error. gamma -> 0 is the infinitesimal-nudge regime
+    # in which PC is claimed to equal backprop.
     output_nudge: float = 1.0
     grad_clip: float = 10.0
 
-    # "strict": top-down predictions are recomputed from the relaxed states at
-    #   every inference step. This is predictive coding as literally specified.
-    # "fixed": predictions (and their local derivatives) are frozen at their
-    #   feedforward values for the whole relaxation -- the Fixed Prediction
-    #   Assumption of Millidge et al. (2020).
+    # "strict": predictions are recomputed from the relaxed states every step.
+    # "fixed": predictions and their local derivatives are frozen at feedforward
+    # values (Fixed Prediction Assumption, Millidge et al. 2020).
     #
-    # The two agree to first order but converge to *different* fixed points, and
-    # only "fixed" reproduces the backprop gradient. See docs/FINDINGS.md.
+    # The two agree to first order but converge to different fixed points, and only
+    # "fixed" reproduces the backprop gradient. See docs/FINDINGS.md.
     prediction_mode: str = "strict"
 
 
@@ -122,9 +119,9 @@ class PredictiveCodingNet:
         if target is not None:
             states[-1] = states[-1] + self.cfg.output_nudge * (target - states[-1])
 
-        # Under the Fixed Prediction Assumption the predictions -- and the local
-        # derivatives f'(a_l) that gate the top-down error -- are pinned to the
-        # feedforward pass and never see the relaxed states.
+        # Under the FPA the predictions, and the derivatives f'(a_l) that gate the
+        # top-down error, are pinned to the feedforward pass and never see the
+        # relaxed states.
         preds = [self.predict(ff[l], l) for l in range(self.n_layers)] if fixed else None
         dfs = [self.act.df(ff[l]) for l in range(self.n_layers)] if fixed else None
 
@@ -136,7 +133,6 @@ class PredictiveCodingNet:
             # Hidden states only: layer 0 is the clamped input, layer L is either
             # clamped to the target or is itself just the top prediction.
             for l in range(1, self.n_layers):
-                # dF/da_l = e_l - f'(a_l) * (W_l^T e_{l+1})
                 df_l = dfs[l] if fixed else self.act.df(states[l])
                 lateral = (errors[l + 1] @ self.W[l]) * df_l
                 grad = errors[l] - lateral

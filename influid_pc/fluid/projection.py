@@ -4,14 +4,13 @@ Given a raw field g, solve the pressure Poisson equation
 
     lap(p) = div(g),      u = g - grad(p),      so that div(u) = 0.
 
-The paper is emphatic (sections 1.3, 2.1.3, 3.1.3, 8.7) that this should be a
-*safety net*, not the primary construction: if you build g as a raw gradient
-field and then project, the projector can annihilate almost all of it, because a
-gradient field is exactly the thing a Leray projector kills.
+The paper is emphatic (sections 1.3, 2.1.3, 3.1.3, 8.7) that this should be a safety
+net rather than the primary construction. Building g as a raw gradient field and then
+projecting can annihilate almost all of it, since a gradient field is precisely what a
+Leray projector kills.
 
-`retained_energy` below is the number that makes that concrete: it is the
-fraction of the field that survives projection. We report it so the failure mode
-is visible rather than mysterious.
+`retained_energy` reports the fraction of the field that survives projection, which
+makes that failure mode visible.
 """
 
 from __future__ import annotations
@@ -33,18 +32,18 @@ def cg_poisson(
 ) -> Tuple[Tensor, int, float]:
     """Conjugate gradient for lap(p) = rhs with Neumann boundaries.
 
-    With pure Neumann conditions the Laplacian is singular (constants are in the
-    null space), so we project the mean out of both the right-hand side and the
-    iterate. That is Lemma 7.2 in the paper: pressure is unique only up to an
-    additive constant, and the resulting velocity does not care.
+    Under pure Neumann conditions the Laplacian is singular (constants lie in its null
+    space), so the mean is projected out of both the right-hand side and the iterate.
+    Paper, Lemma 7.2: the pressure is unique only up to an additive constant, and the
+    resulting velocity is unaffected by it.
     """
     b = rhs.shape[0]
     in_dtype = rhs.dtype
 
-    # Conjugate gradients in float32 loses orthogonality on this operator and the
-    # residual starts *growing* after ~200 iterations (measured: 0.06 -> 1.6e3 -> NaN).
-    # The Laplacian here is singular and poorly conditioned, so the solve runs in
-    # float64 regardless of the caller's dtype. On a grid this size that is free.
+    # In float32 conjugate gradients loses orthogonality on this singular, poorly
+    # conditioned operator and the residual starts growing after ~200 iterations
+    # (measured: 0.06 -> 1.6e3 -> NaN). The solve therefore runs in float64 regardless
+    # of the caller's dtype; on a grid this size that costs nothing.
     work = rhs.to(torch.float64)
 
     def demean(v: Tensor) -> Tensor:
@@ -72,8 +71,7 @@ def cg_poisson(
             best_res, best_p = res, p
         if res < tol:
             break
-        # Guard against the breakdown above: never return a worse iterate than the
-        # best one seen.
+        # Never return a worse iterate than the best one seen, in case of breakdown.
         if res > 10.0 * best_res:
             break
 
@@ -84,8 +82,8 @@ def cg_poisson(
 
 
 def _zero_boundary_faces(ux: Tensor, uy: Tensor) -> Tuple[Tensor, Tensor]:
-    """No flux through the domain wall. This is physics, but it is also what makes
-    the projector *orthogonal* -- see `_Leray`."""
+    """No flux through the domain wall. Also the condition under which the projector
+    is orthogonal rather than oblique; see `_Leray`."""
     ux, uy = ux.clone(), uy.clone()
     ux[:, :, 0] = 0
     ux[:, :, -1] = 0
@@ -102,23 +100,23 @@ def _project_raw(ux: Tensor, uy: Tensor, dx: float, dy: float, iters: int):
 
 
 class _Leray(torch.autograd.Function):
-    """Projection as a first-class linear operator, not a differentiated solver.
+    """Projection as a linear operator with a hand-written backward.
 
-    On the space of face fields with **zero boundary faces** -- the only physically
-    meaningful space, since no flux may cross the domain wall -- `gradient` is exactly
-    the negative adjoint of `divergence`. There P = I - grad L^-1 div is a genuine
-    *orthogonal* projection: linear, idempotent, self-adjoint. Its Jacobian is P
-    itself, so its vector-Jacobian product is just P applied to the incoming gradient.
+    On the space of face fields with zero boundary faces (the physically meaningful
+    space, since no flux may cross the domain wall) `gradient` is the negative adjoint
+    of `divergence`. There P = I - grad L^-1 div is an orthogonal projection: linear,
+    idempotent, self-adjoint. Its Jacobian is P itself, so its vector-Jacobian product
+    is P applied to the incoming gradient.
 
-    (Off that subspace this is false: `gradient` pins the boundary faces to zero while
-    `divergence` reads them, so the adjoint identity breaks and P becomes oblique. We
-    therefore project onto the subspace on the way in -- which is physics we wanted
-    anyway -- rather than assume the caller did. Verified against finite differences in
-    `test_leray_custom_backward_matches_autograd_through_the_solver`.)
+    Off that subspace this fails: `gradient` pins the boundary faces to zero while
+    `divergence` reads them, the adjoint identity breaks, and P becomes oblique. The
+    operator therefore projects onto the subspace on the way in rather than assume the
+    caller has done so. Verified against finite differences in
+    `test_leray_custom_backward_matches_autograd_through_the_solver`.
 
-    Letting autograd unroll the conjugate-gradient loop instead builds a graph with one
-    node per CG iteration -- hundreds of them -- and backpropagates through the entire
-    solver. Doing it this way costs one extra solve in the backward pass and is exact.
+    The alternative, letting autograd unroll the conjugate-gradient loop, builds a graph
+    with one node per CG iteration and backpropagates through the whole solver. This
+    costs one extra solve in the backward pass and is exact.
     """
 
     @staticmethod

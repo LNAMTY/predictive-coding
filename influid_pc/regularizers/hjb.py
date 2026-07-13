@@ -6,20 +6,20 @@ projecting that control to physical space yields incompressible Navier-Stokes
 (eqs 2.1-2.5). Section 2.3 says the practical version of this is "learn a
 value-like function W_theta encoding task objectives".
 
-We take the stationary form of (2.1) -- drop the d/dt term, since our routing
-layer runs to a fixed horizon rather than tracking a time-varying value:
+This module uses the stationary form of (2.1), dropping the d/dt term because the
+routing layer runs to a fixed horizon rather than tracking a time-varying value:
 
     nu * lap(W) - 0.5 * ||grad W||^2 = V
 
-and penalise the squared residual. V is the running cost. In a classification
-network there is no hand-drawn "target band" to fly toward, so we define the cost
-from the only task signal that is legitimately available to this layer: its own
-local prediction error. Cells whose mass incurs large prediction error are
-expensive; the value field is pushed to route mass away from them.
+and penalises the squared residual. V is the running cost. A classification network has
+no hand-drawn "target band" to fly toward, so the cost is defined from the only task
+signal legitimately available to this layer: its own local prediction error. Cells whose
+mass incurs large prediction error are expensive, and the value field is pushed to route
+mass away from them.
 
-This keeps the regulariser strictly local -- it reads the layer's error and its
-own value net, nothing else -- which is what lets it coexist with predictive
-coding instead of smuggling a global gradient back in.
+The regulariser therefore reads only the layer's error and its own value net, which is
+what allows it to coexist with predictive coding rather than reintroducing a global
+gradient.
 """
 
 from __future__ import annotations
@@ -46,8 +46,8 @@ def hjb_residual(
     lap = laplacian_cell(value, dx, dy)
 
     gx, gy = gradient(value, dx, dy)
-    # Face gradients -> cell-centred squared magnitude (average the two faces
-    # bounding each cell, which is the standard collocated reconstruction).
+    # Face gradients to a cell-centred squared magnitude, averaging the two faces
+    # bounding each cell (the standard collocated reconstruction).
     gx_c = 0.5 * (gx[:, :, 1:] + gx[:, :, :-1])
     gy_c = 0.5 * (gy[:, 1:, :] + gy[:, :-1, :])
     grad_sq = gx_c.pow(2) + gy_c.pow(2)

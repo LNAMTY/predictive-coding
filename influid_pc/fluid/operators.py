@@ -5,10 +5,9 @@ Face-normal velocities live on cell faces:       ux      [B, H, W+1]   (vertical
                                                  uy      [B, H+1, W]   (horizontal faces)
 Node-centred stream function lives on corners:   psi     [B, H+1, W+1]
 
-The staggering is not decoration. It is what makes the discrete identity
-div(curl(psi)) == 0 hold to machine precision rather than to truncation error,
-which in turn is what lets us claim exact incompressibility instead of
-approximate incompressibility.
+The staggering is what makes the discrete identity div(curl(psi)) == 0 hold to
+machine precision rather than to truncation error, and hence what makes the
+incompressibility exact rather than approximate.
 """
 
 from __future__ import annotations
@@ -29,8 +28,8 @@ def divergence(ux: Tensor, uy: Tensor, dx: float = 1.0, dy: float = 1.0) -> Tens
 def gradient(p: Tensor, dx: float = 1.0, dy: float = 1.0) -> Tuple[Tensor, Tensor]:
     """Face-centred gradient of a cell scalar, with zero-flux (Neumann) borders.
 
-    Adjoint of `divergence` up to sign, which is exactly what the Poisson solve
-    needs for the projection to be an orthogonal projection.
+    Adjoint of `divergence` up to sign, which is what the Poisson solve needs for
+    the projection to be orthogonal.
     """
     b, h, w = p.shape
     gx = torch.zeros(b, h, w + 1, device=p.device, dtype=p.dtype)
@@ -79,9 +78,9 @@ def rescale_to_cfl(
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """Rescale the velocity so every sample hits a target Courant number.
 
-    Section 8 of the paper reports this as one of four decisive ingredients:
-    CFL << 0.05 means nothing moves, CFL near 1 means the integrator breaks.
-    Rescaling is a per-sample scalar, so it cannot introduce divergence.
+    Section 8 of the paper reports this as one of four decisive ingredients: at
+    CFL << 0.05 nothing moves, and near CFL 1 the integrator breaks. The rescaling
+    is a per-sample scalar, so it cannot introduce divergence.
     """
     cfl = cfl_number(ux, uy, dt, dx, dy)
     scale = target / (cfl + eps)
@@ -102,10 +101,9 @@ def face_masks_from_cells(free_cell: Tensor) -> Tuple[Tensor, Tensor]:
 def node_mask_from_cells(free_cell: Tensor) -> Tensor:
     """Nodes touching any blocked cell (or the domain border) are pinned.
 
-    Pinning psi to a constant on these nodes forces every face on an obstacle
-    boundary to have equal psi at both endpoints, hence zero normal velocity --
-    a no-through wall that costs us nothing in incompressibility, because the
-    field is still an exact curl.
+    Pinning psi to a constant on these nodes gives every face on an obstacle boundary
+    equal psi at both endpoints, hence zero normal velocity. The wall costs nothing in
+    incompressibility because the field remains an exact curl.
     """
     h, w = free_cell.shape
     blocked = ~free_cell

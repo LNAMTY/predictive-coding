@@ -1,14 +1,13 @@
-"""Does predictive coding compute the backprop gradient? Measure it, don't assume it.
+"""Measures cosine(PC update, BP gradient). Writes results/alignment.json.
 
-Produces results/alignment.json, covering three sweeps:
+Three sweeps:
 
-  nudge   cosine(PC, BP) as the output nudge gamma -> 0, for both prediction modes
-  steps   cosine(PC, BP) as inference relaxation runs longer
+  nudge   as the output nudge gamma -> 0, for both prediction modes
+  steps   as inference relaxation runs longer
   depth   how the above degrades as the network gets deeper
 
-The paper asserts an envelope theorem ("predictive coding gradients match the
-global objective gradient at convergence"). These sweeps say exactly when that is
-true and when it is not.
+The paper asserts an envelope theorem: predictive-coding gradients match the global
+objective gradient at convergence. These sweeps establish when that holds.
 """
 
 from __future__ import annotations
@@ -88,7 +87,8 @@ def main() -> None:
             out["depth"].append(
                 {"mode": mode, "hidden_layers": n_hidden, "cosine": g, "layer_cosine": per}
             )
-            print(f"  {mode:6s} hidden={n_hidden} cos={g:.6f}  per-layer={[f'{c:.3f}' for c in per]}")
+            per_str = [f"{c:.3f}" for c in per]
+            print(f"  {mode:6s} hidden={n_hidden} cos={g:.6f}  per-layer={per_str}")
 
     RESULTS.mkdir(exist_ok=True)
     (RESULTS / "alignment.json").write_text(json.dumps(out, indent=2))

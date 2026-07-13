@@ -2,15 +2,14 @@
 
     L_trans = alpha * E[ 0.5 ||u||^2 ]  +  beta * E[ ||div u||^2 ]
 
-The alpha term is the control cost: it penalises the network for spending large
-velocities to achieve its routing. The beta term softly reinforces incompressibility.
+The alpha term is the control cost, penalising large velocities. The beta term softly
+reinforces incompressibility.
 
-Note that when the velocity comes from a stream function, div u is zero by
-construction, so the beta term is *identically zero and contributes no gradient*.
-That is not a bug -- it is the cleanest possible statement of why parameterising
-inside the solenoidal subspace is better than penalising your way toward it. We
-still compute and log it, because when beta stops being able to do anything, that
-is worth being able to see.
+When the velocity comes from a stream function, div u is zero by construction, so the
+beta term is identically zero and contributes no gradient. This is expected, and it is
+the practical argument for parameterising inside the solenoidal subspace rather than
+penalising a field toward it. The term is still computed and logged so that its being
+inert is visible.
 """
 
 from __future__ import annotations

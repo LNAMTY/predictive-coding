@@ -1,21 +1,20 @@
-"""Connections: the only thing a PC layer needs to know about its neighbour.
+"""Connections: the interface between one predictive-coding layer and the next.
 
-A connection between layer l and l+1 must answer exactly three questions:
+A connection between layer l and l+1 supplies three quantities:
 
-    predict(a_l)          what do I expect a_{l+1} to be?
-    vjp(a_l, e_{l+1})     how should a_l move to reduce that error?   (d ahat/d a_l)^T e
-    local_update(...)     how should my parameters move to reduce it? (d ahat/d theta)^T e
+    predict(a_l)          the expected value of a_{l+1}
+    vjp(a_l, e_{l+1})     how a_l must move to reduce that error   (d ahat/d a_l)^T e
+    local_update(...)     how the parameters must move to reduce it (d ahat/d theta)^T e
 
-All three are local to the connection. Nothing here can see the loss, the output
-layer, or any other connection -- which is precisely why swapping in an exotic
-connection (a fluid transport layer, say) does not reintroduce backpropagation.
-The credit assignment stays predictive coding; only the local map changes.
+All three are local to the connection: none can see the loss, the output layer, or
+any other connection. An exotic connection (the fluid transport layer, say) can
+therefore be swapped in without reintroducing backpropagation, since only the local
+map changes and the credit assignment stays predictive coding.
 
 `LinearConnection` computes all three in closed form and never touches autograd.
-`ModuleConnection` wraps an arbitrary nn.Module and gets them from autograd -- but
-autograd is invoked *inside a single connection*, on detached inputs, so the
-computation graph never spans two layers. `diagnostics/locality.py` asserts this
-rather than trusting the comment.
+`ModuleConnection` wraps an arbitrary nn.Module and obtains them from autograd, but
+invokes it inside a single connection on detached inputs, so the computation graph
+never spans two layers. `tests/test_locality.py` checks this.
 """
 
 from __future__ import annotations
@@ -41,7 +40,7 @@ class Connection(ABC):
 
     @abstractmethod
     def vjp(self, a: Tensor, e: Tensor) -> Tensor:
-        """(d predict / d a)^T @ e -- the top-down signal that moves the state below."""
+        """(d predict / d a)^T @ e: the top-down signal that moves the state below."""
 
     @abstractmethod
     def local_update(self, a: Tensor, e: Tensor) -> Dict[str, float]:
@@ -113,10 +112,9 @@ class LinearConnection(Connection):
 class ModuleConnection(Connection):
     """Wraps an nn.Module as a PC connection. ahat = module(f(a)).
 
-    Autograd is used, but only to differentiate this one module, on detached
-    inputs. The graph is created and destroyed inside `vjp` / `local_update`, so
-    it cannot reach any other layer. That is local learning with a convenient
-    differentiator, not backpropagation.
+    Autograd differentiates this one module on detached inputs. The graph is created
+    and destroyed inside `vjp` / `local_update`, so it cannot reach any other layer:
+    autograd is a convenient local differentiator here, not a backward chain.
     """
 
     def __init__(
@@ -146,11 +144,10 @@ class ModuleConnection(Connection):
     def prepare_vjp(self, a: Tensor) -> None:
         """Build the graph once and reuse it for every inference step.
 
-        Under the Fixed Prediction Assumption the point we linearise about does not
-        move during relaxation, so all N inference steps ask for a vector-Jacobian
-        product at the *same* `a` with different `e`. Rebuilding the graph N times
-        (which for the fluid layer means re-running the whole transport rollout) is
-        pure waste.
+        Under the Fixed Prediction Assumption the linearisation point does not move
+        during relaxation, so every inference step asks for a vector-Jacobian product
+        at the same `a` with a different `e`. Rebuilding the graph each time would
+        re-run the whole transport rollout in the fluid layer's case.
         """
         a_leaf = a.detach().requires_grad_(True)
         out = self.module(self.act.f(a_leaf))
