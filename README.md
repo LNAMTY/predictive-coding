@@ -23,12 +23,17 @@ influid_pc/
 |---|---|
 | **PC on full MNIST, zero backprop** | **97.2%** (3-layer, local Hebbian updates only) |
 | **PC update vs. true backprop gradient** | cosine **0.99999** — but only under the Fixed Prediction Assumption |
-| **Strict PC at 8 hidden layers** | cosine **0.756**, and falling with depth |
-| **Fluid transport invariants** | mass drift `1e-7`, `div u ≈ 1e-6`, CFL pinned to 0.40 |
-| **Paper's κ=0.3 diffusion warmup** | **harmful here** — collapses a classifier to chance |
+| **Strict PC at 8 hidden layers** | cosine **0.756** and falling — costing 3.5 points of accuracy |
+| **Fluid transport invariants** | mass drift `1e-7`, `div u ≈ 1e-6`, CFL pinned to 0.40, exactly 0 flux into obstacles |
+| **Routing task (the paper's §8)** | **54%** of the budget delivered vs **0.05%** for diffusion, **0%** for raw-gradient+projection |
+| **Paper's κ=0.3 diffusion warmup** | **harmful for classification** — collapses a linear probe to chance in one step |
+| **Fluid layer on EMNIST, capacity-matched** | **loses** to a plain MLP of the same size, at 20× the compute |
 
-The detailed argument, with the experiments that back each claim, is in
-**[docs/FINDINGS.md](docs/FINDINGS.md)**. That is the document to read.
+Two of these contradict the paper, and one of them is a one-line fix. The detailed argument, with
+the experiment behind every number, is in **[docs/FINDINGS.md](docs/FINDINGS.md)** — that is the
+document to read.
+
+![routing](figures/fig5_routing_task.png)
 
 ## Quick start
 

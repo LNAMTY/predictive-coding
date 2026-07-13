@@ -232,15 +232,93 @@ test time.
 
 ---
 
+## 6. Does the fluid layer actually help? Not at classification — but decisively at routing
+
+This is the question the paper leaves open ("the research hasn't been implemented fully to see
+the full effect"), so it deserves a straight answer in both directions.
+
+### At classification, incompressible transport does not earn its keep
+
+EMNIST-Letters, 26 classes, 20k train, **matched at 4 epochs** so the comparison is fair:
+
+| model | test acc | note |
+|---|---|---|
+| PC, 1×128 hidden | 63.54 | the small baseline |
+| **PC + fluid transport** | **68.98** | +5.4 over the small baseline |
+| PC + fluid + HJB | 64.82 | HJB *costs* 4.2 points |
+| **PC, 196-196-128 (capacity-matched, no fluid)** | **70.02** | **a plain MLP of the same size beats it** |
+
+The +5.4-point gain from adding the transport layer looks impressive **until you control for
+capacity**. The fluid layer adds a 196-unit grid layer plus a stream network; give a *plain* MLP
+the same extra width and depth and it scores **70.02** — a point better than the fluid model, at
+roughly **1/20th the compute**.
+
+**So the honest conclusion is: on MNIST-like classification, the incompressible transport layer's
+accuracy gain is explained entirely by the parameters it adds, not by the transport.** We looked
+for this result to be otherwise and it is not. The HJB regulariser makes things actively worse.
+
+### At routing, it wins outright — and nothing else even functions
+
+But classification is not the task In-Fluid-Net was designed for. The paper's own toy problem is
+*routing a conserved budget around obstacles into a target region*, which is where directed,
+mass-conserving transport should matter. We reproduced it (24×24 grid, seed at top-left, target
+band bottom-right, a pillar and a bar in the way) and — unlike the paper — ran baselines:
+
+| mechanism | band mass ↑ | E[distance] ↓ | ‖div u‖ | CFL |
+|---|---|---|---|---|
+| isotropic diffusion | 0.0005 | 12.67 | 0 | 0 |
+| raw gradient + Leray projection | **0.0000** | 22.00 | ~0 | 0 |
+| **stream function + greedy controller** | **0.5400** | **2.64** | 9e-07 | 0.40 |
+
+**54% of the entire budget is delivered into the band.** Diffusion delivers 0.05% — it spreads
+into the nearest corner and never arrives, exactly the failure the paper's introduction describes.
+
+![routing](../figures/fig5_routing_task.png)
+
+And the raw-gradient route delivers **nothing at all** — because the projector destroys **100%** of
+the field. Note this was run with the *ideal* value function (the true graph distance to the band),
+not a learned one. So this is not a training failure; it is structural. A Leray projector is the
+operator that annihilates gradient fields, and `−∇W` is a gradient field. **This single number is
+the strongest confirmation in the repo of the paper's most important practical warning**, and it is
+why the stream-function parameterisation is not a stylistic preference but the thing that makes the
+method work at all.
+
+### Where that leaves In-Fluid-Net
+
+The mechanism does what it claims — conserves mass exactly, routes around hard obstacles, stays
+stable — and it beats the alternatives *on transport problems*. What we could not find is evidence
+that a classifier is a transport problem. Bolting the layer onto MNIST/EMNIST buys nothing a plain
+layer of equal size does not buy more cheaply.
+
+**The productive next step is therefore not "scale In-Fluid-Net on ImageNet". It is to find a task
+whose structure actually is routing under a conserved budget** — sparse-reward RL credit
+assignment, attention-budget allocation over a graph, or the ECAN-style economics the paper's
+introduction cites — and test it there. On that class of problem the routing figure above suggests
+it will win, and win big.
+
+---
+
 ## Summary for the research programme
 
 | the paper says | we find |
 |---|---|
-| PC gradients match the global gradient at convergence | Only under the Fixed Prediction Assumption. Strict PC plateaus at cosine 0.985 and **decays to 0.76 by 8 layers**. |
-| Parameterise inside the divergence-free subspace; projection is a safety net | **Confirmed, emphatically.** Projection kills >95% of a raw gradient field; a stream function retains 100% and makes the projector a no-op. |
-| Anneal diffusion κ: 0.3 → 0 to "explore then sharpen" | **Does not transfer.** In a classifier the density *is* the signal, and κ=0.3 drives a linear probe to chance in one step. Use κ=0. |
-| Target CFL ∈ [0.3, 0.45] | **Confirmed** — and cheap to enforce exactly, since a per-sample rescale cannot introduce divergence. |
-| Local learning eliminates the backprop chain | **True, and verified in code** — the linear connections never call autograd. |
+| PC gradients match the global gradient at convergence | ⚠️ Only under the Fixed Prediction Assumption. Strict PC plateaus at cosine 0.985 and **decays to 0.76 by 8 layers**, costing 3.5 points of accuracy. |
+| Parameterise inside the divergence-free subspace; projection is a safety net | ✅ **Confirmed, emphatically.** The projector destroys **100%** of an ideal raw-gradient drift. A stream function retains 100% and makes the projector a no-op (and 3.3× faster). |
+| Anneal diffusion κ: 0.3 → 0 to "explore then sharpen" | ❌ **Does not transfer to classification.** There the density *is* the signal, and κ=0.3 drives a linear probe to chance in one step. Use κ=0. |
+| Target CFL ∈ [0.3, 0.45] | ✅ **Confirmed** — and free to enforce exactly, since a per-sample rescale cannot introduce divergence. |
+| Local learning eliminates the backprop chain | ✅ **True, and verified in code** — we sabotage `torch.autograd` and train anyway. |
+| Incompressible transport beats undirected diffusion for routing | ✅ **Confirmed and quantified**: 54% of the budget delivered vs 0.05% for diffusion. |
+| (implied) this should make a better network | ❌ **Not at classification.** At matched capacity a plain MLP beats the fluid layer at 1/20th the cost. HJB regularisation makes it worse still. |
 
-The most actionable of these is the first: it is a one-line change to the inference loop, and it is
-the difference between a credit-assignment rule that scales with depth and one that quietly does not.
+**The two things worth acting on:**
+
+1. **Freeze the predictions during relaxation.** It is a one-line change, and it is the difference
+   between a credit-assignment rule that holds at 8 layers (cosine 1.000) and one that quietly
+   degrades (0.756). Anyone building on §4.2 of the paper as written is training on a biased
+   gradient without knowing it.
+
+2. **Stop evaluating In-Fluid-Net on classification.** The transport machinery is correct and it
+   wins decisively on routing, but a classifier is not a routing problem, and the accuracy gains it
+   appears to give are just the parameters it adds. Test it where the budget metaphor is literally
+   true — sparse-reward credit assignment, attention allocation over a graph — and the routing
+   result suggests it will be worth the compute.
