@@ -28,13 +28,17 @@ from typing import Dict, List
 
 import torch
 
-from influid_pc import data
+from influid_pc import data, report
 from influid_pc.build import ModelSpec, build
 from influid_pc.diagnostics.bp_alignment import _cosine
 from influid_pc.pc.connections import LinearConnection
 from influid_pc.pc.network import PCNetwork, PCTrainConfig
 
 RESULTS = Path(__file__).parent / "results"
+
+
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}" + ("" if n == 1 else "s")
 
 
 def parse_args() -> argparse.Namespace:
@@ -158,15 +162,32 @@ def train_bp(args, bundle) -> Dict[str, object]:
     setting. Without this the comparison can be won by handing the baseline a learning
     rate that diverges, which is what lr=0.1 does at depth 1.
     """
+    report.header(
+        "backprop baseline  ·  best of a learning-rate sweep",
+        [
+            ("dataset", f"{bundle.name}  ({bundle.num_classes} classes, {bundle.input_dim}-dim)"),
+            ("network", report.arch(bundle.input_dim, args.hidden, bundle.num_classes, None)),
+            ("training", f"SGD · momentum {args.momentum} · {_plural(args.epochs, 'epoch')}"),
+        ],
+    )
+
+    cols: List[report.Column] = [
+        ("learning rate", 15, "g", ""), ("test acc", 11, ".2f", "%"), ("time", 9, ".1f", "s"),
+    ]
+    report.table_header(cols)
+
     candidates = sorted({args.weight_lr, 0.1, 0.05, 0.02, 0.01}, reverse=True)
     runs = []
     for lr in candidates:
         r = _train_bp_once(args, bundle, lr)
         runs.append(r)
-        print(f"[bp]  lr={lr:<5} final {r['final_acc']:6.2f}%")
+        report.table_row(cols, {
+            "learning rate": lr,
+            "test acc": r["final_acc"],
+            "time": r["history"][-1]["elapsed"],
+        })
 
     best = max(runs, key=lambda r: r["final_acc"])
-    print(f"[bp]  best lr={best['lr']} -> {best['final_acc']:.2f}%")
     best["lr_sweep"] = {str(r["lr"]): r["final_acc"] for r in runs}
     return best
 
@@ -204,7 +225,37 @@ def train_pc(args, bundle) -> Dict[str, object]:
         transport_beta=args.transport_beta,
     )
     net = build(spec, cfg)
-    print(f"[pc]  {net.n_layers} connections, {net.num_parameters:,} params")
+
+    mode = "fixed predictions (FPA)" if args.prediction_mode == "fixed" else "strict predictions"
+    components = [c for c, on in (
+        ("Navier-Stokes transport", args.fluid),
+        ("HJB regulariser", args.hjb),
+        ("Leray projection", args.projection),
+        ("obstacles", args.obstacles),
+    ) if on]
+    grid = args.fluid_grid if args.fluid else None
+    shape = report.arch(bundle.input_dim, args.hidden, bundle.num_classes, grid)
+    report.header(
+        f"predictive coding  ·  {mode}",
+        [
+            ("dataset", f"{bundle.name}  ({bundle.num_classes} classes, {bundle.input_dim}-dim)"),
+            ("network", f"{shape}   ({net.num_parameters:,} params)"),
+            ("learning", f"lr {args.weight_lr} · nudge {args.output_nudge} · "
+                         f"{args.inference_steps} inference steps · "
+                         f"{_plural(args.epochs, 'epoch')}"),
+            ("extras", ", ".join(components) if components else "none (plain PC)"),
+        ],
+    )
+
+    cols: List[report.Column] = [
+        ("epoch", 7, "d", ""), ("test acc", 11, ".2f", "%"), ("free energy", 13, ".4f", ""),
+    ]
+    if args.track_alignment:
+        cols.append(("cos(BP)", 10, ".4f", ""))
+    if args.fluid:
+        cols += [("mass drift", 12, ".1e", ""), ("div u", 10, ".1e", ""), ("CFL", 7, ".2f", "")]
+    cols.append(("time", 9, ".1f", "s"))
+    report.table_header(cols)
 
     probe_x, probe_y = next(iter(bundle.train))
     probe_t = data.one_hot(probe_y, bundle.num_classes)
@@ -233,17 +284,19 @@ def train_pc(args, bundle) -> Dict[str, object]:
 
         history.append(row)
 
-        extra = ""
+        cells: Dict[str, object] = {
+            "epoch": epoch,
+            "test acc": acc,
+            "free energy": avg.get("free_energy", 0.0),
+            "time": time.time() - t0,
+        }
+        if args.track_alignment:
+            cells["cos(BP)"] = row["bp_cosine"]
         if args.fluid:
-            keys = ["mass_drift", "div_final", "cfl", "retained_energy"]
-            extra = "  " + " ".join(
-                f"{k.split('/')[-1]}={avg[f'L1/{k}']:.3g}" for k in keys if f"L1/{k}" in avg
-            )
-        align = f"  cos(BP)={row['bp_cosine']:.4f}" if args.track_alignment else ""
-        print(
-            f"[pc]  epoch {epoch:2d}  test_acc {acc:6.2f}%  F={avg.get('free_energy', 0):.4f}"
-            f"{align}{extra}  ({time.time()-t0:.1f}s)"
-        )
+            cells["mass drift"] = avg.get("L1/mass_drift")
+            cells["div u"] = avg.get("L1/div_final")
+            cells["CFL"] = avg.get("L1/cfl")
+        report.table_row(cols, cells)
 
     return {"history": history, "final_acc": history[-1]["test_acc"], "params": net.num_parameters}
 
@@ -261,10 +314,6 @@ def main() -> None:
         test_subset=args.test_subset,
         seed=args.seed,
     )
-    print(
-        f"dataset={bundle.name}  classes={bundle.num_classes}  "
-        f"input_dim={bundle.input_dim}  learner={args.learner}"
-    )
 
     result = train_bp(args, bundle) if args.learner == "bp" else train_pc(args, bundle)
     result["config"] = vars(args)
@@ -279,7 +328,15 @@ def main() -> None:
     )
     path = Path(args.out) if args.out else RESULTS / f"{tag}.json"
     path.write_text(json.dumps(result, indent=2))
-    print(f"final: {result['final_acc']:.2f}%  ->  {path}")
+
+    rows = [("final", f"{result['final_acc']:.2f}%  test accuracy")]
+    if args.learner == "bp":
+        rows.append(("best lr", f"{result['lr']}  (of {len(result['lr_sweep'])} swept)"))
+    if args.learner == "pc" and not args.fluid:
+        rows.append(("credit", "local Hebbian updates only, no backpropagation"))
+    shown = path.relative_to(Path.cwd()) if path.is_relative_to(Path.cwd()) else path
+    rows.append(("saved", str(shown)))
+    report.summary(rows)
 
 
 if __name__ == "__main__":

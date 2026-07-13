@@ -40,26 +40,39 @@ experiment behind every number, is in **[docs/FINDINGS.md](docs/FINDINGS.md)**.
 uv venv --python 3.12 .venv
 uv pip install --python .venv/bin/python -r requirements.txt \
     --extra-index-url https://download.pytorch.org/whl/cpu
-
-# predictive coding alone
-.venv/bin/python train.py --dataset mnist --epochs 10 --train-subset 0 \
-    --hidden 256 128 --weight-lr 0.1 --track-alignment
-
-# different class counts
-.venv/bin/python train.py --dataset mnist --num-classes 3 --epochs 8
-
-# a different dataset with a different class count, plus Navier-Stokes and HJB
-.venv/bin/python train.py --dataset emnist_letters --fluid --hjb --epochs 4
 ```
 
-Tests, experiments and figures:
+Every run is one command. `make` on its own lists them:
 
-```bash
-.venv/bin/python -m pytest tests/ -q          # 19 tests: invariants, locality, PC vs backprop
-PYTHONPATH=. .venv/bin/python scripts/alignment_study.py
-PYTHONPATH=. .venv/bin/python scripts/routing_task.py
-PYTHONPATH=. .venv/bin/python scripts/run_experiments.py
-PYTHONPATH=. .venv/bin/python scripts/make_figures.py
+| command | what it runs |
+|---|---|
+| `make pc` | predictive coding on MNIST, 10 classes, no backprop |
+| `make classes` | the same, swept over 2 / 3 / 5 / 10 classes |
+| `make deep` | strict vs fixed predictions at 6 hidden layers — the headline finding, end to end |
+| `make fluid` | plus Navier–Stokes transport, on EMNIST-Letters (26 classes) |
+| `make hjb` | the same, plus Hamilton–Jacobi–Bellman regularisation |
+| `make bp` | backprop baseline, best of a learning-rate sweep |
+| `make alignment` | cosine between the PC update and the true backprop gradient |
+| `make routing` | the paper's routing task, with the baselines it lacks |
+| `make test` | the full test suite (19 tests) |
+| `make figures` | rebuild `figures/` from `results/` |
+
+Each run prints a header saying exactly what it is training, an aligned per-epoch table, and a
+summary. The fluid runs add the transport invariants (mass drift, `‖div u‖`, CFL) as columns, so a
+broken flow is visible while it is still training:
+
+```
+  predictive coding  ·  fixed predictions (FPA)
+  ────────────────────────────────────────────────────────────────────────────
+  dataset       emnist_letters  (26 classes, 784-dim)
+  network       784 -> [fluid 14x14] -> 128 -> 26   (201,985 params)
+  learning      lr 0.1 · nudge 0.2 · 24 inference steps · 4 epochs
+  extras        Navier-Stokes transport
+  ────────────────────────────────────────────────────────────────────────────
+
+    epoch   test acc  free energy  mass drift     div u    CFL     time
+    ─────  ─────────  ───────────  ──────────  ────────  ─────  ───────
+        1     52.31%       0.2230     1.7e-07   1.4e-06   0.40    47.2s
 ```
 
 ## What each piece is

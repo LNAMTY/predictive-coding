@@ -1,7 +1,7 @@
 # Understanding the pieces
 
 Written to be read top to bottom. Each section says what the idea *is*, why it is shaped that way,
-and which file it lives in — so you can decide what you actually want to keep.
+and which file it lives in, so that each component can be judged and kept or dropped on its own.
 
 ---
 
@@ -213,9 +213,9 @@ squared prediction error. Cells whose mass incurs prediction error are expensive
 regulariser **local** (it reads only this layer's error and this layer's value net), which is what
 lets it coexist with predictive coding instead of sneaking a global gradient back in.
 
-**Does it help?** No. It costs 4.2 points of accuracy on EMNIST (FINDINGS §6). It is off by default.
-I would keep the code (it is the paper's central theoretical claim, and it is only ~60 lines) and
-leave the flag off.
+**Does it help?** No. It costs 4.2 points of accuracy on EMNIST (FINDINGS §6), so it is off by
+default. The code stays in the repo because it is the paper's central theoretical claim and only
+takes ~60 lines, but nothing here relies on it.
 
 **Where it lives:** `influid_pc/regularizers/hjb.py`.
 
@@ -229,20 +229,22 @@ The paper's system is a **reaction–diffusion–advection** loop:
 |---|---|---|
 | **reaction** | fast local error correction | predictive coding's inference relaxation |
 | **advection** | long-range, goal-directed routing | the fluid transport layer |
-| **diffusion** | gentle smoothing for stability | the `κ` term (which we find you should set to 0) |
+| **diffusion** | gentle smoothing for stability | the `κ` term, which is set to 0 by default |
 
 Predictive coding is the *learning rule*; the fluid layer is a *module* that learns under that rule.
-They are orthogonal, which is why you can keep one and throw away the other.
+The two are orthogonal, which is why either can be kept without the other.
 
 ---
 
-## 5. What to keep
+## 5. What this repo keeps, and why
 
-If you want the defensible minimum, keep **`pc/`** and the alignment diagnostic. That is a complete,
-verified, backprop-free learner with a real finding attached (`strict` vs `fixed`), and you can
-explain every line of it.
+**`pc/` and the alignment diagnostic are the core.** Together they are a complete, verified,
+backprop-free learner, and they carry the one finding that changes what someone building on the
+paper should do: `strict` versus `fixed` prediction mode. Everything else is optional and defaults
+to off.
 
-If you want the full story, keep the fluid layer too — but present it honestly: the mechanism is
-*correct and beautiful* (exact conservation, exact incompressibility, obstacle routing) and it
-**wins decisively on the routing task it was designed for**, while **losing to a plain layer on
-classification**. That contrast is a more interesting thing to present than a fake win would be.
+**The fluid layer is kept, but reported as it measured.** The mechanism is correct — exact mass
+conservation, exact incompressibility, exact no-through obstacles — and it wins decisively on the
+routing task it was designed for. On classification it loses to a plain layer of the same size.
+Both halves of that are in FINDINGS, because the contrast is the more useful result: it says the
+machinery works and is being evaluated on the wrong kind of problem.

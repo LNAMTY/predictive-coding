@@ -44,6 +44,11 @@ from .operators import (
 from .projection import leray_project
 
 
+def _scalar(t: Tensor) -> float:
+    """Diagnostics are read off tensors that may still carry a graph."""
+    return float(t.detach())
+
+
 class IncompressibleRouting(nn.Module):
     def __init__(
         self,
@@ -132,13 +137,13 @@ class IncompressibleRouting(nn.Module):
             ux, uy, pstats = leray_project(ux, uy, iters=100)
             stats.update({f"proj/{k}": v for k, v in pstats.items()})
         else:
-            stats["proj/div_before"] = float(divergence(ux, uy).norm())
+            stats["proj/div_before"] = _scalar(divergence(ux, uy).norm())
 
         # Obstacles / borders: no flux through a wall.
         ux, uy = self._apply_walls(ux, uy)
 
         proj_energy = (ux.pow(2).sum() + uy.pow(2).sum()).sqrt()
-        retained = float(proj_energy / (raw_energy + 1e-12))
+        retained = _scalar(proj_energy / (raw_energy + 1e-12))
         stats["retained_energy"] = retained
 
         # If the projector annihilated the drift, as it does to a raw gradient field,
@@ -151,13 +156,13 @@ class IncompressibleRouting(nn.Module):
         if collapsed:
             stats["cfl_pre_rescale"] = 0.0
             stats["cfl"] = 0.0
-            stats["div_final"] = float(divergence(ux, uy).norm())
+            stats["div_final"] = _scalar(divergence(ux, uy).norm())
             return ux, uy, stats
 
         ux, uy, cfl_pre = rescale_to_cfl(ux, uy, self.dt, self.target_cfl)
-        stats["cfl_pre_rescale"] = float(cfl_pre.mean())
-        stats["cfl"] = float(cfl_number(ux, uy, self.dt).mean())
-        stats["div_final"] = float(divergence(ux, uy).norm())
+        stats["cfl_pre_rescale"] = _scalar(cfl_pre.mean())
+        stats["cfl"] = _scalar(cfl_number(ux, uy, self.dt).mean())
+        stats["div_final"] = _scalar(divergence(ux, uy).norm())
 
         return ux, uy, stats
 
@@ -190,12 +195,12 @@ class IncompressibleRouting(nn.Module):
             rho = advect(rho, ux, uy, self.dt, kappa=kappa, free_cell=self.free_cell)
 
         drift = (total_mass(rho) - m0).abs().max()
-        stats["mass_drift"] = float(drift)
-        stats["mass"] = float(total_mass(rho).mean())
-        stats["mass_entropy"] = float(
+        stats["mass_drift"] = _scalar(drift)
+        stats["mass"] = _scalar(total_mass(rho).mean())
+        stats["mass_entropy"] = _scalar(
             -(rho.clamp_min(1e-12) * rho.clamp_min(1e-12).log()).sum(dim=(1, 2)).mean()
         )
-        stats["gain"] = float(self.gain)
+        stats["gain"] = _scalar(self.gain)
         self.last_stats = stats
 
         if self.residual:
