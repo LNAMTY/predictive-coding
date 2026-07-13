@@ -39,14 +39,23 @@ def cg_poisson(
     additive constant, and the resulting velocity does not care.
     """
     b = rhs.shape[0]
+    in_dtype = rhs.dtype
+
+    # Conjugate gradients in float32 loses orthogonality on this operator and the
+    # residual starts *growing* after ~200 iterations (measured: 0.06 -> 1.6e3 -> NaN).
+    # The Laplacian here is singular and poorly conditioned, so the solve runs in
+    # float64 regardless of the caller's dtype. On a grid this size that is free.
+    work = rhs.to(torch.float64)
 
     def demean(v: Tensor) -> Tensor:
         return v - v.reshape(b, -1).mean(dim=1).view(-1, 1, 1)
 
-    r = demean(rhs.clone())
-    p = torch.zeros_like(rhs)
+    r = demean(work)
+    p = torch.zeros_like(work)
     d = r.clone()
     rs = (r.reshape(b, -1) * r.reshape(b, -1)).sum(dim=1)
+
+    best_p, best_res = p, float(rs.max().detach().sqrt())
 
     it = 0
     for it in range(1, iters + 1):
@@ -56,14 +65,22 @@ def cg_poisson(
         p = p + alpha.view(-1, 1, 1) * d
         r = r - alpha.view(-1, 1, 1) * ad
         rs_new = (r.reshape(b, -1) * r.reshape(b, -1)).sum(dim=1)
+
         # rs is a squared norm; the tolerance is on the residual norm.
-        if float(rs_new.max().detach().sqrt()) < tol:
-            rs = rs_new
+        res = float(rs_new.max().detach().sqrt())
+        if res < best_res:
+            best_res, best_p = res, p
+        if res < tol:
             break
+        # Guard against the breakdown above: never return a worse iterate than the
+        # best one seen.
+        if res > 10.0 * best_res:
+            break
+
         d = r + (rs_new / (rs + 1e-30)).view(-1, 1, 1) * d
         rs = rs_new
 
-    return demean(p), it, float(rs.max().sqrt())
+    return demean(best_p).to(in_dtype), it, best_res
 
 
 def leray_project(

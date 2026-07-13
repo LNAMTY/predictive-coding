@@ -1,0 +1,24 @@
+{
+  "diffusion": {
+    "band_mass": 0.0004852457204833627,
+    "expected_distance": 12.669955253601074,
+    "div_norm": 0.0,
+    "cfl": 0.0,
+    "mass": 0.7019041776657104
+  },
+  "raw-gradient + projection": {
+    "band_mass": 0.0,
+    "expected_distance": 22.0,
+    "div_norm": 7.436500709445681e-06,
+    "cfl": 2.384185791015625e-07,
+    "mass": 1.0
+  },
+  "_raw_gradient_energy_retained_by_projection": 5.380144420213236e-08,
+  "stream function (greedy)": {
+    "band_mass": 0.5400027632713318,
+    "expected_distance": 2.6406707763671875,
+    "div_norm": 9.184132068185136e-07,
+    "cfl": 0.39999860525131226,
+    "mass": 0.9999998807907104
+  }
+}

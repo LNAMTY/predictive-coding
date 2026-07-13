@@ -185,10 +185,50 @@ Across class counts (the task's "different classification" — MNIST subset to *
 Predictive coding **matches or beats backprop at k = 2 and k = 3** and trails by ~1 point at k = 10,
 using only local Hebbian updates — no global backward pass anywhere.
 
+Note the comparison is deliberately **biased against PC**: backprop is given the best of a
+learning-rate sweep (`{0.1, 0.05, 0.02, 0.01}`), while PC runs at a single fixed setting. At
+depth 1, lr = 0.1 diverges for backprop, and reporting that as "PC beats backprop 94.9 to 9.8"
+would have been a cheat.
+
 ```bash
 .venv/bin/python train.py --dataset mnist --epochs 10 --train-subset 0 \
     --hidden 256 128 --weight-lr 0.1 --track-alignment
 ```
+
+### 5b. The PC–backprop gap widens with the number of classes
+
+Extending to a different dataset with a different class count — **EMNIST-Letters, 26 classes**
+(20k train, 1×128 hidden, 8 epochs):
+
+| classes | dataset | backprop | PC | gap |
+|---|---|---|---|---|
+| 2 | MNIST | 99.91 | 99.91 | **0.00** |
+| 3 | MNIST | 99.30 | 99.46 | **+0.16** |
+| 5 | MNIST | 99.10 | 98.92 | −0.18 |
+| 10 | MNIST | 96.28 | 95.36 | −0.92 |
+| 26 | EMNIST-Letters | 76.50 | 72.14 | **−4.36** |
+
+This is not undertuning. We swept PC's inference steps (24, 48) and learning rate (0.05, 0.1):
+the number moves by less than half a point.
+
+**We had a hypothesis, and it was wrong.** The natural explanation is that PC drives learning
+through a nudge `γ` at the output layer, and with `k` classes the one-hot target concentrates that
+nudge on 1 unit out of `k` while the other `k−1` receive only weak suppression — so the effective
+drive should dilute as `k` grows, and raising `γ` with `k` should compensate. It does not:
+
+| nudge γ | lr 0.02 | lr 0.05 |
+|---|---|---|
+| 0.2 | 66.9 | 71.0 |
+| 0.4 | 69.5 | **71.2** |
+| 0.6 | 70.7 | 69.6 |
+| 1.0 | 55.0 | 4.4 (diverged) |
+
+Nothing beats the 72.1 baseline, and large `γ` destabilises inference outright. So the dilution
+story is not the mechanism, and the cause of the widening gap remains **open**. Recording this
+matters: it eliminates the most obvious explanation and tells the next person not to spend a day
+on it. The remaining suspects are the MSE-on-one-hot energy (which couples all `k` output units
+through the same quadratic) and the fact that PC's output layer is relaxed rather than clamped at
+test time.
 
 ---
 

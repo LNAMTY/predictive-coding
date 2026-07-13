@@ -1,0 +1,93 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "test_acc": 80.14,
+      "elapsed": 13.790053606033325,
+      "L0/dW": 0.08627503485487292,
+      "L1/dW": 0.10056256768278801,
+      "L2/dW": 0.19342115638069451,
+      "L3/dW": 0.3637695202526574,
+      "free_energy": 0.01921604794209091
+    },
+    {
+      "epoch": 2,
+      "test_acc": 82.26,
+      "elapsed": 23.43311309814453,
+      "L0/dW": 0.045168759063267096,
+      "L1/dW": 0.05753268582966571,
+      "L2/dW": 0.12218290057997354,
+      "L3/dW": 0.24269166536414966,
+      "free_energy": 0.008189410151253207
+    },
+    {
+      "epoch": 3,
+      "test_acc": 82.66,
+      "elapsed": 33.65759754180908,
+      "L0/dW": 0.04266042061768972,
+      "L1/dW": 0.05282736069763811,
+      "L2/dW": 0.11237100007149359,
+      "L3/dW": 0.21669491635153468,
+      "free_energy": 0.0073192648086756375
+    },
+    {
+      "epoch": 4,
+      "test_acc": 83.9,
+      "elapsed": 47.73865103721619,
+      "L0/dW": 0.042003363918382136,
+      "L1/dW": 0.04987011204202906,
+      "L2/dW": 0.10080504786377897,
+      "L3/dW": 0.19232786099274699,
+      "free_energy": 0.006685765237717059
+    }
+  ],
+  "final_acc": 83.9,
+  "params": 218978,
+  "config": {
+    "dataset": "fashion",
+    "num_classes": null,
+    "data_root": "./data",
+    "train_subset": 20000,
+    "test_subset": 5000,
+    "batch_size": 64,
+    "epochs": 4,
+    "seed": 0,
+    "learner": "pc",
+    "hidden": [
+      196,
+      196,
+      128
+    ],
+    "activation": "tanh",
+    "weight_lr": 0.1,
+    "momentum": 0.9,
+    "inference_steps": 24,
+    "inference_lr": 0.1,
+    "output_nudge": 0.2,
+    "prediction_mode": "fixed",
+    "fluid": false,
+    "fluid_grid": 14,
+    "fluid_steps": 8,
+    "fluid_dt": 0.5,
+    "fluid_cfl": 0.4,
+    "fluid_kappa": 0.0,
+    "fluid_lr": 0.001,
+    "velocity_mode": "stream",
+    "projection": false,
+    "readout": "scaled",
+    "obstacles": false,
+    "no_residual": false,
+    "hjb": false,
+    "hjb_weight": 0.01,
+    "hjb_nu": 0.01,
+    "transport_alpha": 0.001,
+    "transport_beta": 0.001,
+    "track_alignment": false,
+    "tag": "exp3-fashion-pc-ctrl-4ep",
+    "out": null
+  },
+  "dataset": {
+    "name": "fashion",
+    "num_classes": 10
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "test_acc": 49.38,
+      "elapsed": 16.35779643058777,
+      "L0/dW": 0.07653440276797586,
+      "L1/dW": 0.1334320568381407,
+      "L2/dW": 0.34906386338864653,
+      "L3/dW": 1.286040478430617,
+      "free_energy": 0.03946868004723669
+    },
+    {
+      "epoch": 2,
+      "test_acc": 54.4,
+      "elapsed": 30.900603532791138,
+      "L0/dW": 0.03941099478985174,
+      "L1/dW": 0.09166423966899848,
+      "L2/dW": 0.2766407925766497,
+      "L3/dW": 0.9061610365447145,
+      "free_energy": 0.019622464970753976
+    },
+    {
+      "epoch": 3,
+      "test_acc": 66.92,
+      "elapsed": 45.35120153427124,
+      "L0/dW": 0.03755845431202707,
+      "L1/dW": 0.0846497010046872,
+      "L2/dW": 0.25373531511416453,
+      "L3/dW": 0.8034176245665017,
+      "free_energy": 0.01727801058798457
+    },
+    {
+      "epoch": 4,
+      "test_acc": 70.02,
+      "elapsed": 59.03119397163391,
+      "L0/dW": 0.03690864875341376,
+      "L1/dW": 0.08214877988583745,
+      "L2/dW": 0.24810315630496882,
+      "L3/dW": 0.7680847492461769,
+      "free_energy": 0.015733714560612132
+    }
+  ],
+  "final_acc": 70.02,
+  "params": 221042,
+  "config": {
+    "dataset": "emnist_letters",
+    "num_classes": null,
+    "data_root": "./data",
+    "train_subset": 20000,
+    "test_subset": 5000,
+    "batch_size": 64,
+    "epochs": 4,
+    "seed": 0,
+    "learner": "pc",
+    "hidden": [
+      196,
+      196,
+      128
+    ],
+    "activation": "tanh",
+    "weight_lr": 0.1,
+    "momentum": 0.9,
+    "inference_steps": 24,
+    "inference_lr": 0.1,
+    "output_nudge": 0.2,
+    "prediction_mode": "fixed",
+    "fluid": false,
+    "fluid_grid": 14,
+    "fluid_steps": 8,
+    "fluid_dt": 0.5,
+    "fluid_cfl": 0.4,
+    "fluid_kappa": 0.0,
+    "fluid_lr": 0.001,
+    "velocity_mode": "stream",
+    "projection": false,
+    "readout": "scaled",
+    "obstacles": false,
+    "no_residual": false,
+    "hjb": false,
+    "hjb_weight": 0.01,
+    "hjb_nu": 0.01,
+    "transport_alpha": 0.001,
+    "transport_beta": 0.001,
+    "track_alignment": false,
+    "tag": "exp3-emnist_letters-pc-ctrl-4ep",
+    "out": null
+  },
+  "dataset": {
+    "name": "emnist_letters",
+    "num_classes": 26
+  }
+}

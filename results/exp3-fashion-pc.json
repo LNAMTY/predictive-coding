@@ -1,0 +1,115 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "test_acc": 78.06,
+      "elapsed": 2.2558979988098145,
+      "L0/dW": 0.20480185511489266,
+      "L1/dW": 0.48187415477947687,
+      "free_energy": 0.014905002938149075
+    },
+    {
+      "epoch": 2,
+      "test_acc": 81.96,
+      "elapsed": 4.5377418994903564,
+      "L0/dW": 0.10044146181581119,
+      "L1/dW": 0.40031303941441804,
+      "free_energy": 0.007341115269809961
+    },
+    {
+      "epoch": 3,
+      "test_acc": 82.26,
+      "elapsed": 6.764834642410278,
+      "L0/dW": 0.09239132704730994,
+      "L1/dW": 0.35845597635823695,
+      "free_energy": 0.006571820401512205
+    },
+    {
+      "epoch": 4,
+      "test_acc": 82.62,
+      "elapsed": 9.068541049957275,
+      "L0/dW": 0.08917443554241436,
+      "L1/dW": 0.3512053294970205,
+      "free_energy": 0.006247108103707433
+    },
+    {
+      "epoch": 5,
+      "test_acc": 83.2,
+      "elapsed": 11.246069192886353,
+      "L0/dW": 0.08885579491956547,
+      "L1/dW": 0.34712673349978446,
+      "free_energy": 0.006014386851774951
+    },
+    {
+      "epoch": 6,
+      "test_acc": 83.96,
+      "elapsed": 13.507735013961792,
+      "L0/dW": 0.08766834118876594,
+      "L1/dW": 0.32489270057541114,
+      "free_energy": 0.005736194967557066
+    },
+    {
+      "epoch": 7,
+      "test_acc": 84.12,
+      "elapsed": 15.788746118545532,
+      "L0/dW": 0.08649191468620833,
+      "L1/dW": 0.32671497500361724,
+      "free_energy": 0.005639954505803677
+    },
+    {
+      "epoch": 8,
+      "test_acc": 84.44,
+      "elapsed": 18.16055917739868,
+      "L0/dW": 0.08756139957771515,
+      "L1/dW": 0.320493195194025,
+      "free_energy": 0.00555724429171949
+    }
+  ],
+  "final_acc": 84.44,
+  "params": 101770,
+  "config": {
+    "dataset": "fashion",
+    "num_classes": null,
+    "data_root": "./data",
+    "train_subset": 20000,
+    "test_subset": 5000,
+    "batch_size": 64,
+    "epochs": 8,
+    "seed": 0,
+    "learner": "pc",
+    "hidden": [
+      128
+    ],
+    "activation": "tanh",
+    "weight_lr": 0.1,
+    "momentum": 0.9,
+    "inference_steps": 24,
+    "inference_lr": 0.1,
+    "output_nudge": 0.2,
+    "prediction_mode": "fixed",
+    "fluid": false,
+    "fluid_grid": 14,
+    "fluid_steps": 8,
+    "fluid_dt": 0.5,
+    "fluid_cfl": 0.4,
+    "fluid_kappa": 0.0,
+    "fluid_lr": 0.001,
+    "velocity_mode": "stream",
+    "projection": false,
+    "readout": "scaled",
+    "obstacles": false,
+    "no_residual": false,
+    "hjb": false,
+    "hjb_weight": 0.01,
+    "hjb_nu": 0.01,
+    "transport_alpha": 0.001,
+    "transport_beta": 0.001,
+    "track_alignment": false,
+    "tag": "exp3-fashion-pc",
+    "out": null
+  },
+  "dataset": {
+    "name": "fashion",
+    "num_classes": 10
+  }
+}

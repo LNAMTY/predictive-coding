@@ -1,0 +1,83 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "test_acc": 78.06,
+      "elapsed": 4.434717416763306,
+      "L0/dW": 0.20480185511489266,
+      "L1/dW": 0.48187415477947687,
+      "free_energy": 0.014905002938149075
+    },
+    {
+      "epoch": 2,
+      "test_acc": 81.96,
+      "elapsed": 8.636244773864746,
+      "L0/dW": 0.10044146181581119,
+      "L1/dW": 0.40031303941441804,
+      "free_energy": 0.007341115269809961
+    },
+    {
+      "epoch": 3,
+      "test_acc": 82.26,
+      "elapsed": 13.21495532989502,
+      "L0/dW": 0.09239132704730994,
+      "L1/dW": 0.35845597635823695,
+      "free_energy": 0.006571820401512205
+    },
+    {
+      "epoch": 4,
+      "test_acc": 82.62,
+      "elapsed": 17.43284249305725,
+      "L0/dW": 0.08917443554241436,
+      "L1/dW": 0.3512053294970205,
+      "free_energy": 0.006247108103707433
+    }
+  ],
+  "final_acc": 82.62,
+  "params": 101770,
+  "config": {
+    "dataset": "fashion",
+    "num_classes": null,
+    "data_root": "./data",
+    "train_subset": 20000,
+    "test_subset": 5000,
+    "batch_size": 64,
+    "epochs": 4,
+    "seed": 0,
+    "learner": "pc",
+    "hidden": [
+      128
+    ],
+    "activation": "tanh",
+    "weight_lr": 0.1,
+    "momentum": 0.9,
+    "inference_steps": 24,
+    "inference_lr": 0.1,
+    "output_nudge": 0.2,
+    "prediction_mode": "fixed",
+    "fluid": false,
+    "fluid_grid": 14,
+    "fluid_steps": 8,
+    "fluid_dt": 0.5,
+    "fluid_cfl": 0.4,
+    "fluid_kappa": 0.0,
+    "fluid_lr": 0.001,
+    "velocity_mode": "stream",
+    "projection": false,
+    "readout": "scaled",
+    "obstacles": false,
+    "no_residual": false,
+    "hjb": false,
+    "hjb_weight": 0.01,
+    "hjb_nu": 0.01,
+    "transport_alpha": 0.001,
+    "transport_beta": 0.001,
+    "track_alignment": false,
+    "tag": "exp3-fashion-pc-4ep",
+    "out": null
+  },
+  "dataset": {
+    "name": "fashion",
+    "num_classes": 10
+  }
+}
