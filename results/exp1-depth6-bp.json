@@ -1,0 +1,102 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "test_acc": 91.82,
+      "elapsed": 1.7763760089874268
+    },
+    {
+      "epoch": 2,
+      "test_acc": 94.02,
+      "elapsed": 3.5537149906158447
+    },
+    {
+      "epoch": 3,
+      "test_acc": 95.18,
+      "elapsed": 5.133356094360352
+    },
+    {
+      "epoch": 4,
+      "test_acc": 95.7,
+      "elapsed": 6.498742580413818
+    },
+    {
+      "epoch": 5,
+      "test_acc": 95.96,
+      "elapsed": 7.863108158111572
+    },
+    {
+      "epoch": 6,
+      "test_acc": 95.74,
+      "elapsed": 9.309961318969727
+    },
+    {
+      "epoch": 7,
+      "test_acc": 96.14,
+      "elapsed": 10.669151782989502
+    },
+    {
+      "epoch": 8,
+      "test_acc": 96.62,
+      "elapsed": 12.0982985496521
+    }
+  ],
+  "final_acc": 96.62,
+  "lr": 0.1,
+  "lr_sweep": {
+    "0.1": 96.62,
+    "0.05": 96.3,
+    "0.02": 94.84,
+    "0.01": 93.58
+  },
+  "config": {
+    "dataset": "mnist",
+    "num_classes": null,
+    "data_root": "./data",
+    "train_subset": 20000,
+    "test_subset": 5000,
+    "batch_size": 64,
+    "epochs": 8,
+    "seed": 0,
+    "learner": "bp",
+    "hidden": [
+      128,
+      128,
+      128,
+      128,
+      128,
+      128
+    ],
+    "activation": "tanh",
+    "weight_lr": 0.1,
+    "momentum": 0.9,
+    "inference_steps": 32,
+    "inference_lr": 0.1,
+    "output_nudge": 0.2,
+    "prediction_mode": "fixed",
+    "fluid": false,
+    "fluid_grid": 14,
+    "fluid_steps": 8,
+    "fluid_dt": 0.5,
+    "fluid_cfl": 0.4,
+    "fluid_kappa": 0.0,
+    "fluid_lr": 0.001,
+    "velocity_mode": "stream",
+    "projection": false,
+    "readout": "scaled",
+    "obstacles": false,
+    "no_residual": false,
+    "hjb": false,
+    "hjb_weight": 0.01,
+    "hjb_nu": 0.01,
+    "transport_alpha": 0.001,
+    "transport_beta": 0.001,
+    "track_alignment": true,
+    "tag": "exp1-depth6-bp",
+    "out": null
+  },
+  "dataset": {
+    "name": "mnist",
+    "num_classes": 10
+  }
+}

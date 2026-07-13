@@ -1,0 +1,115 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "test_acc": 52.78,
+      "elapsed": 2.280292272567749,
+      "L0/dW": 0.2714730664944877,
+      "L1/dW": 1.0212780583780794,
+      "free_energy": 0.03617557361662483
+    },
+    {
+      "epoch": 2,
+      "test_acc": 63.44,
+      "elapsed": 4.626899003982544,
+      "L0/dW": 0.1058538102399046,
+      "L1/dW": 0.7996300375118804,
+      "free_energy": 0.016714529431880284
+    },
+    {
+      "epoch": 3,
+      "test_acc": 64.36,
+      "elapsed": 7.060307502746582,
+      "L0/dW": 0.09784667136760565,
+      "L1/dW": 0.7455842683490473,
+      "free_energy": 0.014767016974477151
+    },
+    {
+      "epoch": 4,
+      "test_acc": 63.54,
+      "elapsed": 9.568119287490845,
+      "L0/dW": 0.09764398974827684,
+      "L1/dW": 0.7582706203475927,
+      "free_energy": 0.013993464847699331
+    },
+    {
+      "epoch": 5,
+      "test_acc": 68.38,
+      "elapsed": 11.834152221679688,
+      "L0/dW": 0.09808794877970942,
+      "L1/dW": 0.7106292623871813,
+      "free_energy": 0.012969071697146176
+    },
+    {
+      "epoch": 6,
+      "test_acc": 68.92,
+      "elapsed": 14.21273136138916,
+      "L0/dW": 0.09485483812257504,
+      "L1/dW": 0.6753921369775034,
+      "free_energy": 0.01216065774139124
+    },
+    {
+      "epoch": 7,
+      "test_acc": 67.46,
+      "elapsed": 16.490386724472046,
+      "L0/dW": 0.09396197758734036,
+      "L1/dW": 0.6633433369211496,
+      "free_energy": 0.011668373765156101
+    },
+    {
+      "epoch": 8,
+      "test_acc": 72.14,
+      "elapsed": 18.735482454299927,
+      "L0/dW": 0.09417193256818449,
+      "L1/dW": 0.6654964931094989,
+      "free_energy": 0.01141296342884104
+    }
+  ],
+  "final_acc": 72.14,
+  "params": 103834,
+  "config": {
+    "dataset": "emnist_letters",
+    "num_classes": null,
+    "data_root": "./data",
+    "train_subset": 20000,
+    "test_subset": 5000,
+    "batch_size": 64,
+    "epochs": 8,
+    "seed": 0,
+    "learner": "pc",
+    "hidden": [
+      128
+    ],
+    "activation": "tanh",
+    "weight_lr": 0.1,
+    "momentum": 0.9,
+    "inference_steps": 24,
+    "inference_lr": 0.1,
+    "output_nudge": 0.2,
+    "prediction_mode": "fixed",
+    "fluid": false,
+    "fluid_grid": 14,
+    "fluid_steps": 8,
+    "fluid_dt": 0.5,
+    "fluid_cfl": 0.4,
+    "fluid_kappa": 0.0,
+    "fluid_lr": 0.001,
+    "velocity_mode": "stream",
+    "projection": false,
+    "readout": "scaled",
+    "obstacles": false,
+    "no_residual": false,
+    "hjb": false,
+    "hjb_weight": 0.01,
+    "hjb_nu": 0.01,
+    "transport_alpha": 0.001,
+    "transport_beta": 0.001,
+    "track_alignment": false,
+    "tag": "exp3-emnist-pc",
+    "out": null
+  },
+  "dataset": {
+    "name": "emnist_letters",
+    "num_classes": 26
+  }
+}

@@ -1,0 +1,98 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "test_acc": 98.85605338417541,
+      "elapsed": 1.0147590637207031
+    },
+    {
+      "epoch": 2,
+      "test_acc": 98.85605338417541,
+      "elapsed": 2.059980869293213
+    },
+    {
+      "epoch": 3,
+      "test_acc": 99.0467111534795,
+      "elapsed": 3.071603298187256
+    },
+    {
+      "epoch": 4,
+      "test_acc": 99.17381633301557,
+      "elapsed": 4.136681318283081
+    },
+    {
+      "epoch": 5,
+      "test_acc": 99.20559262789959,
+      "elapsed": 5.181913137435913
+    },
+    {
+      "epoch": 6,
+      "test_acc": 99.14204003813155,
+      "elapsed": 6.273471832275391
+    },
+    {
+      "epoch": 7,
+      "test_acc": 99.20559262789959,
+      "elapsed": 7.314183950424194
+    },
+    {
+      "epoch": 8,
+      "test_acc": 99.30092151255164,
+      "elapsed": 8.433376789093018
+    }
+  ],
+  "final_acc": 99.30092151255164,
+  "lr": 0.05,
+  "lr_sweep": {
+    "0.1": 99.2373689227836,
+    "0.05": 99.30092151255164,
+    "0.02": 99.17381633301557,
+    "0.01": 99.30092151255164
+  },
+  "config": {
+    "dataset": "mnist",
+    "num_classes": 3,
+    "data_root": "./data",
+    "train_subset": 20000,
+    "test_subset": 5000,
+    "batch_size": 64,
+    "epochs": 8,
+    "seed": 0,
+    "learner": "bp",
+    "hidden": [
+      256,
+      128
+    ],
+    "activation": "tanh",
+    "weight_lr": 0.1,
+    "momentum": 0.9,
+    "inference_steps": 24,
+    "inference_lr": 0.1,
+    "output_nudge": 0.2,
+    "prediction_mode": "fixed",
+    "fluid": false,
+    "fluid_grid": 14,
+    "fluid_steps": 8,
+    "fluid_dt": 0.5,
+    "fluid_cfl": 0.4,
+    "fluid_kappa": 0.0,
+    "fluid_lr": 0.001,
+    "velocity_mode": "stream",
+    "projection": false,
+    "readout": "scaled",
+    "obstacles": false,
+    "no_residual": false,
+    "hjb": false,
+    "hjb_weight": 0.01,
+    "hjb_nu": 0.01,
+    "transport_alpha": 0.001,
+    "transport_beta": 0.001,
+    "track_alignment": true,
+    "tag": "exp2-mnist-k3-bp",
+    "out": null
+  },
+  "dataset": {
+    "name": "mnist",
+    "num_classes": 3
+  }
+}

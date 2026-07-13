@@ -1,0 +1,123 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "test_acc": 90.66,
+      "elapsed": 6.093415021896362,
+      "L0/dW": 0.19339611202764054,
+      "L1/dW": 0.2742628964800804,
+      "free_energy": 0.007778117584195524,
+      "bp_cosine": 0.9944047927856445
+    },
+    {
+      "epoch": 2,
+      "test_acc": 92.52,
+      "elapsed": 12.014866352081299,
+      "L0/dW": 0.09504620341685252,
+      "L1/dW": 0.20977436484524997,
+      "free_energy": 0.00408939636437395,
+      "bp_cosine": 0.9975840449333191
+    },
+    {
+      "epoch": 3,
+      "test_acc": 93.28,
+      "elapsed": 18.162896156311035,
+      "L0/dW": 0.08270063561896165,
+      "L1/dW": 0.2018771045647871,
+      "free_energy": 0.0034417013411585707,
+      "bp_cosine": 0.9984703063964844
+    },
+    {
+      "epoch": 4,
+      "test_acc": 93.38,
+      "elapsed": 24.294816255569458,
+      "L0/dW": 0.07450085690322394,
+      "L1/dW": 0.19006093698568619,
+      "free_energy": 0.003056046429102104,
+      "bp_cosine": 0.998184859752655
+    },
+    {
+      "epoch": 5,
+      "test_acc": 94.14,
+      "elapsed": 30.36123013496399,
+      "L0/dW": 0.06615060676162997,
+      "L1/dW": 0.17512331176965762,
+      "free_energy": 0.0027560968217573848,
+      "bp_cosine": 0.9986591339111328
+    },
+    {
+      "epoch": 6,
+      "test_acc": 94.26,
+      "elapsed": 36.50461506843567,
+      "L0/dW": 0.06205758695213939,
+      "L1/dW": 0.1718119560196377,
+      "free_energy": 0.0025805853208312737,
+      "bp_cosine": 0.998824417591095
+    },
+    {
+      "epoch": 7,
+      "test_acc": 94.58,
+      "elapsed": 42.42513561248779,
+      "L0/dW": 0.0586682255394733,
+      "L1/dW": 0.16424256515579103,
+      "free_energy": 0.0024181994837902177,
+      "bp_cosine": 0.999004602432251
+    },
+    {
+      "epoch": 8,
+      "test_acc": 94.86,
+      "elapsed": 48.71738362312317,
+      "L0/dW": 0.058985132664537275,
+      "L1/dW": 0.17045723042263392,
+      "free_energy": 0.002336872705874352,
+      "bp_cosine": 0.9979897737503052
+    }
+  ],
+  "final_acc": 94.86,
+  "params": 101770,
+  "config": {
+    "dataset": "mnist",
+    "num_classes": null,
+    "data_root": "./data",
+    "train_subset": 20000,
+    "test_subset": 5000,
+    "batch_size": 64,
+    "epochs": 8,
+    "seed": 0,
+    "learner": "pc",
+    "hidden": [
+      128
+    ],
+    "activation": "tanh",
+    "weight_lr": 0.1,
+    "momentum": 0.9,
+    "inference_steps": 32,
+    "inference_lr": 0.1,
+    "output_nudge": 0.2,
+    "prediction_mode": "strict",
+    "fluid": false,
+    "fluid_grid": 14,
+    "fluid_steps": 8,
+    "fluid_dt": 0.5,
+    "fluid_cfl": 0.4,
+    "fluid_kappa": 0.0,
+    "fluid_lr": 0.001,
+    "velocity_mode": "stream",
+    "projection": false,
+    "readout": "scaled",
+    "obstacles": false,
+    "no_residual": false,
+    "hjb": false,
+    "hjb_weight": 0.01,
+    "hjb_nu": 0.01,
+    "transport_alpha": 0.001,
+    "transport_beta": 0.001,
+    "track_alignment": true,
+    "tag": "exp1-depth1-pc-strict",
+    "out": null
+  },
+  "dataset": {
+    "name": "mnist",
+    "num_classes": 10
+  }
+}
