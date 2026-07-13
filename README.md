@@ -1,40 +1,59 @@
 # In-Fluid-PC
 
-Predictive coding trained **without backpropagation**, together with a from-scratch
-implementation of *Incompressible-Fluid Networks* (Goertzel, Oct 2025): incompressible
-Navier–Stokes transport, Helmholtz–Hodge projection, and Hamilton–Jacobi–Bellman
-regularisation, built as components that can be switched on and off one at a time.
+Predictive coding trained without backpropagation, plus a from-scratch implementation of
+*Incompressible-Fluid Networks* (Goertzel, Oct 2025) — Navier–Stokes transport, Helmholtz–Hodge
+projection, and Hamilton–Jacobi–Bellman regularisation.
 
-Predictive coding stands alone. Everything taken from the paper sits on top of it and can be
-removed without touching the PC core:
+This is my submission for the training task:
 
-```
-influid_pc/
-  pc/          predictive coding.          mandatory. no autograd, no backward chain.
-  fluid/       Navier-Stokes transport.    remove: drop --fluid (off by default)
-  regularizers/hjb.py                      remove: drop --hjb   (off by default)
-  regularizers/transport.py                remove: --transport-alpha 0 --transport-beta 0
-  diagnostics/ the measurements that decide whether any of it works
-```
+> Train PC with different classification (current MNIST 10 class). + Navier-Stokes (fluid dynamics),
+> use a dataset other than MNIST with a different class count.
 
-## Headline results
+I built predictive coding first, on its own, and then added each piece of the paper on top of it as
+a component I can switch off independently. The point was to be able to defend every line I keep.
+Along the way I found two things that contradict the paper, and one of them is a one-line fix.
+
+## How I met the task
+
+| what was asked | what I ran | result |
+|---|---|---|
+| PC on a **different classification** than MNIST-10 | MNIST at k = 2, 3, 5 classes, and PC on **EMNIST-Letters, 26 classes** | 99.91 / 99.46 / 98.92, and 72.14 on EMNIST-26 |
+| Navier–Stokes on **another dataset, different class count** | **EMNIST-Letters, 26 classes** — every fluid run | 68.98 with transport, 64.82 with transport + HJB |
+
+No Navier–Stokes run in this repo uses MNIST, and none uses 10 classes. The 10-class MNIST run is
+kept only as the reference point to measure against.
+
+## What I found
 
 | | |
 |---|---|
-| **PC on full MNIST, zero backprop** | **97.2%** (3-layer, local Hebbian updates only) |
-| **PC update vs. true backprop gradient** | cosine **0.99999**, but only under the Fixed Prediction Assumption |
-| **Strict PC at 8 hidden layers** | cosine **0.756** and falling, costing 3.5 points of accuracy |
-| **Fluid transport invariants** | mass drift `1e-7`, `div u ≈ 1e-6`, CFL pinned to 0.40, exactly zero flux into obstacles |
-| **Routing task (paper §8)** | **54%** of the budget delivered, vs **0.05%** for diffusion and **0%** for raw-gradient+projection |
-| **Paper's κ=0.3 diffusion warmup** | harmful for classification; collapses a linear probe to chance in one step |
-| **Fluid layer on EMNIST** | **loses** to the same network with the layer deleted: fewer params, 21× faster |
+| PC on full MNIST, zero backprop | **97.2%** (3 layers, local Hebbian updates only) |
+| PC update vs. the true backprop gradient | cosine **0.99999** — but only under the Fixed Prediction Assumption |
+| Strict PC at 8 hidden layers | cosine **0.756** and falling, costing 3.5 points of accuracy |
+| Fluid transport invariants | mass drift `1e-7`, `div u ≈ 1e-6`, CFL pinned to 0.40, exactly zero flux into obstacles |
+| Routing task (paper §8) | **54%** of the budget delivered, vs **0.05%** for diffusion and **0%** for raw-gradient + projection |
+| The paper's κ=0.3 diffusion warmup | harmful for classification: it collapses a linear probe to chance in one step |
+| The fluid layer on EMNIST | **loses** to the same network with the layer deleted — fewer params, 21× faster |
 
-Two of these contradict the paper, and one of them is a one-line fix. The full argument, with the
-experiment behind every number, is in **[docs/FINDINGS.md](docs/FINDINGS.md)**.
+The two that contradict the paper:
+
+1. **The envelope theorem only holds if you freeze the top-down predictions.** Implemented strictly,
+   as §4.2 specifies, PC converges to a fixed point that is *not* the backprop gradient, and
+   shrinking the output nudge does not close the gap. Freezing the predictions fixes it, and that is
+   a one-line change.
+2. **The fluid layer is dominated on classification.** The mechanism is correct and it wins
+   decisively on routing, but a classifier is not a routing problem, and the accuracy it appears to
+   add is just the parameters it adds.
+
+The full argument, with the experiment behind every number, is in
+**[docs/FINDINGS.md](docs/FINDINGS.md)**. If you want the ideas explained from first principles
+instead, read **[docs/UNDERSTANDING.md](docs/UNDERSTANDING.md)**.
 
 ![routing](figures/fig5_routing_task.png)
 
-## Quick start
+## Running it
+
+Setup:
 
 ```bash
 uv venv --python 3.12 .venv
@@ -42,34 +61,46 @@ uv pip install --python .venv/bin/python -r requirements.txt \
     --extra-index-url https://download.pytorch.org/whl/cpu
 ```
 
-Every run is one command. `make` on its own lists them.
+Every run is a single command. `make` on its own prints this list.
 
-**The task.** Predictive coding across different class counts, and Navier–Stokes on a dataset that
-is neither MNIST nor 10-class:
+**The task:**
 
-| command | what it runs |
-|---|---|
-| `make classes` | PC across 2 / 3 / 5 / 10 classes on MNIST |
-| `make fluid` | plus Navier–Stokes transport, on EMNIST-Letters (**26 classes**) |
-| `make hjb` | the same, plus Hamilton–Jacobi–Bellman regularisation |
+```bash
+make classes    # PC across different class counts: 2 / 3 / 5 / 10        (~4 min)
+make fluid      # + Navier-Stokes, EMNIST-Letters, 26 classes             (~6 min)
+make hjb        # the same, + Hamilton-Jacobi-Bellman regularisation      (~7 min)
+```
 
-**The finding.**
+**The findings:**
 
-| command | what it runs |
-|---|---|
-| `make alignment` | cosine between the PC update and the true backprop gradient, strict vs fixed |
-| `make deep` | what that misalignment costs in accuracy, at 6 hidden layers |
-| `make routing` | the paper's routing task, with the baselines it lacks |
+```bash
+make alignment  # PC vs the true backprop gradient, strict vs fixed       (~3 min)
+make deep       # what that misalignment costs in accuracy, at 6 layers   (~5 min)
+make routing    # the paper's routing task, with the baselines it lacks   (~1 min)
+```
 
-**Reference points.** `make pc` is plain predictive coding on MNIST with all 10 classes — the
-starting point the task moves beyond, and the source of the 97.2%-without-backprop number.
-`make bp` is the backprop baseline, given the best of a learning-rate sweep.
+**Reference points:**
 
-Housekeeping: `make test` (19 tests), `make figures`, `make lint`.
+```bash
+make pc         # plain PC, MNIST 10 classes — the starting point         (~2 min)
+make bp         # backprop, given the best of a learning-rate sweep       (~1 min)
+```
 
-Each run prints a header saying exactly what it is training, an aligned per-epoch table, and a
-summary. The fluid runs add the transport invariants (mass drift, `‖div u‖`, CFL) as columns, so a
-broken flow is visible while it is still training:
+**Checks:**
+
+```bash
+make test       # 19 tests: invariants, locality, PC vs backprop
+make figures    # rebuild figures/ from results/
+make lint       # ruff
+```
+
+Anything not covered by a `make` target can be run through `train.py` directly, which takes the
+components as flags (`--fluid`, `--hjb`, `--projection`, `--obstacles`, `--prediction-mode`,
+`--num-classes`, and so on — `python train.py --help` lists them all).
+
+Every run prints what it is training, then a table per epoch. The fluid runs carry the transport
+invariants as live columns, so if the flow breaks I see it while it is still training rather than
+afterwards:
 
 ```
   predictive coding  ·  fixed predictions (FPA)
@@ -85,60 +116,69 @@ broken flow is visible while it is still training:
         1     52.31%       0.2230     1.7e-07   1.4e-06   0.40    47.2s
 ```
 
-## What each piece is
+## How the code is laid out
 
-**`pc/`** — Predictive coding. Each layer holds a state, predicts the layer above, and computes a
-local error. Inference relaxes the states; learning is Hebbian (`ΔW ∝ error × presynaptic
-activity`). The linear connections never call autograd: the update rules are derived by hand, so
-the absence of backpropagation is a property of the code rather than a claim about it.
-`tests/test_locality.py` patches `torch.autograd` to raise and trains the network anyway.
+```
+influid_pc/
+  pc/            predictive coding      the mandatory part: no autograd, no backward chain
+  fluid/         Navier-Stokes transport
+  regularizers/  HJB and transport penalties
+  diagnostics/   the measurements that decide whether any of it works
+```
 
-There are two implementations, and they agree:
+**`pc/`** — Each layer holds a state, predicts the layer above, and computes a local error.
+Inference relaxes the states; learning is Hebbian (`ΔW ∝ error × presynaptic activity`). The linear
+connections never call autograd — I derived the update rules by hand — so "no backpropagation" is a
+property of the code and not a claim in a README. `tests/test_locality.py` patches `torch.autograd`
+to raise an exception and then trains the network to convergence anyway.
 
-* `pc/core.py` — a single self-contained class. Read this one first: the whole algorithm is
-  ~150 lines with the mathematics in the docstring, and it depends on nothing else in the repo.
-* `pc/network.py` + `pc/connections.py` — the same algorithm with each edge behind a `Connection`
-  interface, which is what lets the fluid layer drop in without the PC rules changing. `train.py`
-  uses this one.
+I wrote it twice, deliberately, and the two agree:
 
-Two inference modes, and the difference between them matters a great deal:
+* `pc/core.py` — one self-contained class. **Start here.** The whole algorithm is ~150 lines with
+  the mathematics in the docstring, and it imports nothing else from this repo.
+* `pc/network.py` + `pc/connections.py` — the same algorithm with every edge behind a `Connection`
+  interface, which is what lets the fluid layer drop in without the PC rules changing at all.
+  `train.py` uses this one.
 
-- `--prediction-mode strict` — top-down predictions are recomputed from the relaxed states each step.
-- `--prediction-mode fixed` — predictions are frozen at their feedforward values
-  (the *Fixed Prediction Assumption*, Millidge et al. 2020).
+The inference mode is the switch that carries my main finding:
 
-**`fluid/`** — The paper's In-Fluid-Net transport layer. Activations become a conserved mass
-`ρ ≥ 0, Σρ = 1` on a grid; a learned **stream function** generates a velocity field `u = ∇⊥ψ`
-that is divergence-free by construction; the mass is advected by conservative upwind fluxes with
-CFL targeting. Mass conservation and zero divergence hold to machine precision rather than
-approximately, which `tests/test_fluid_invariants.py` checks.
+* `--prediction-mode strict` — predictions recomputed from the relaxed states each step.
+* `--prediction-mode fixed` — predictions frozen at their feedforward values (the Fixed Prediction
+  Assumption, Millidge et al. 2020). **This is the one that recovers the backprop gradient.**
 
-**`regularizers/hjb.py`** — Stationary Hamilton–Jacobi–Bellman residual `ν∆W − ½‖∇W‖² − V`, with
-the running cost `V` taken from the layer's own prediction error, which keeps the regulariser local.
+**`fluid/`** — The paper's transport layer. Activations become a conserved mass (`ρ ≥ 0, Σρ = 1`) on
+a grid, a learned stream function generates a velocity field `u = ∇⊥ψ` that is divergence-free *by
+construction*, and the mass is advected by conservative upwind fluxes with CFL targeting. Mass
+conservation and zero divergence hold to machine precision, not approximately — that is what
+`tests/test_fluid_invariants.py` checks.
+
+**`regularizers/hjb.py`** — The stationary HJB residual `ν∆W − ½‖∇W‖² − V`. The paper's toy problem
+has a hand-drawn target region to supply the running cost `V`; a classifier has no such thing, so I
+take `V` from the layer's own prediction error, which keeps the regulariser local.
 
 **`diagnostics/`** — `bp_alignment.py` measures the cosine between the PC update and the true
 backprop gradient. The fluid layer logs mass drift, `‖div u‖`, the Courant number, and the fraction
 of the velocity field that survives projection.
 
-## Removing things
+## Removing any of it
 
-The components are independent, and the defaults are the minimum:
+I built the components so they come out cleanly. The defaults are the minimum:
 
-| To drop | Do this |
+| to drop | do this |
 |---|---|
 | Navier–Stokes transport | omit `--fluid` (off by default) |
 | HJB regularisation | omit `--hjb` (off by default) |
-| Transport regularisers | `--transport-alpha 0 --transport-beta 0` |
-| Leray projection | omit `--projection` (off by default; a no-op in stream mode anyway) |
-| Everything except PC | `python train.py --dataset mnist` |
+| transport regularisers | `--transport-alpha 0 --transport-beta 0` |
+| Leray projection | omit `--projection` (off by default, and a no-op in stream mode anyway) |
+| everything except PC | `python train.py --dataset mnist` |
 
-Deleting `influid_pc/fluid/` and `influid_pc/regularizers/` leaves a working predictive-coding
-implementation, because nothing in `pc/` imports them.
+Deleting `influid_pc/fluid/` and `influid_pc/regularizers/` outright still leaves a working
+predictive-coding implementation, because nothing in `pc/` imports them.
 
-## Reference
+## References
 
 Goertzel, B. *Incompressible-Fluid Networks* (v1, October 2025).
-Millidge, B., Tschantz, A., Buckley, C. L. *Predictive Coding Approximates Backprop along
-Arbitrary Computation Graphs* (2020).
+Millidge, B., Tschantz, A., Buckley, C. L. *Predictive Coding Approximates Backprop along Arbitrary
+Computation Graphs* (2020).
 Whittington, J. C. R., Bogacz, R. *An Approximation of the Error Backpropagation Algorithm in a
 Predictive Coding Network with Local Hebbian Synaptic Plasticity* (2017).
