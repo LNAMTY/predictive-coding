@@ -119,22 +119,28 @@ def exp4_fluid() -> None:
     for kappa in (0.0, 0.1, 0.3):
         run(f"exp4-kappa{kappa}", **dict(base, fluid_kappa=kappa))
 
-    # Solenoidal-by-construction vs raw-gradient-then-project.
-    run("exp4-velocity-value", **dict(base, velocity_mode="value"))
+    # The residual wrapper -- the thing that makes the layer safe to insert at all.
+    run("exp4-no-residual", **dict(base, no_residual=True, readout="log"))
 
-    # CFL band.
-    for cfl in (0.05, 0.4, 0.9):
+    # CFL band: too small and nothing moves, too large and the integrator suffers.
+    for cfl in (0.05, 0.9):
         run(f"exp4-cfl{cfl}", **dict(base, fluid_cfl=cfl))
 
-    # Transport horizon.
-    for steps in (2, 8, 16):
-        run(f"exp4-steps{steps}", **dict(base, fluid_steps=steps))
-
-    # HJB regulariser, obstacles, and the non-residual readout.
+    # HJB regulariser and obstacles.
     run("exp4-hjb", **dict(base, hjb=True))
     run("exp4-obstacles", **dict(base, obstacles=True))
-    run("exp4-no-residual", **dict(base, no_residual=True, readout="log"))
-    run("exp4-projection-on", **dict(base, projection=True))
+
+    # NOT run end-to-end: `velocity_mode="value"` and `projection=True`.
+    #
+    # Both force a Poisson solve, and under the Fixed Prediction Assumption every one
+    # of the 24 inference steps asks for a VJP, each of which costs another solve in
+    # the projector's backward. The run is ~20x slower than the rest of this grid and
+    # tells us nothing new: the raw-gradient drift is *annihilated* by the projector
+    # (retained_energy = 0.0000, measured directly in the layer), so the transport term
+    # is identically zero and the residual layer degenerates to the identity. The
+    # collapse is demonstrated far more sharply in scripts/routing_task.py, where the
+    # same drift -- built from the *ideal* value function -- delivers 0.0000 band mass
+    # against the stream function's 0.5400.
 
 
 EXPERIMENTS = {
