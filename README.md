@@ -42,20 +42,30 @@ uv pip install --python .venv/bin/python -r requirements.txt \
     --extra-index-url https://download.pytorch.org/whl/cpu
 ```
 
-Every run is one command. `make` on its own lists them:
+Every run is one command. `make` on its own lists them.
+
+**The task.** Predictive coding across different class counts, and Navier–Stokes on a dataset that
+is neither MNIST nor 10-class:
 
 | command | what it runs |
 |---|---|
-| `make pc` | predictive coding on MNIST, 10 classes, no backprop |
-| `make classes` | the same, swept over 2 / 3 / 5 / 10 classes |
-| `make deep` | strict vs fixed predictions at 6 hidden layers — the headline finding, end to end |
-| `make fluid` | plus Navier–Stokes transport, on EMNIST-Letters (26 classes) |
+| `make classes` | PC across 2 / 3 / 5 / 10 classes on MNIST |
+| `make fluid` | plus Navier–Stokes transport, on EMNIST-Letters (**26 classes**) |
 | `make hjb` | the same, plus Hamilton–Jacobi–Bellman regularisation |
-| `make bp` | backprop baseline, best of a learning-rate sweep |
-| `make alignment` | cosine between the PC update and the true backprop gradient |
+
+**The finding.**
+
+| command | what it runs |
+|---|---|
+| `make alignment` | cosine between the PC update and the true backprop gradient, strict vs fixed |
+| `make deep` | what that misalignment costs in accuracy, at 6 hidden layers |
 | `make routing` | the paper's routing task, with the baselines it lacks |
-| `make test` | the full test suite (19 tests) |
-| `make figures` | rebuild `figures/` from `results/` |
+
+**Reference points.** `make pc` is plain predictive coding on MNIST with all 10 classes — the
+starting point the task moves beyond, and the source of the 97.2%-without-backprop number.
+`make bp` is the backprop baseline, given the best of a learning-rate sweep.
+
+Housekeeping: `make test` (19 tests), `make figures`, `make lint`.
 
 Each run prints a header saying exactly what it is training, an aligned per-epoch table, and a
 summary. The fluid runs add the transport invariants (mass drift, `‖div u‖`, CFL) as columns, so a
