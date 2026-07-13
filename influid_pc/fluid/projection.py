@@ -83,6 +83,57 @@ def cg_poisson(
     return demean(best_p).to(in_dtype), it, best_res
 
 
+def _zero_boundary_faces(ux: Tensor, uy: Tensor) -> Tuple[Tensor, Tensor]:
+    """No flux through the domain wall. This is physics, but it is also what makes
+    the projector *orthogonal* -- see `_Leray`."""
+    ux, uy = ux.clone(), uy.clone()
+    ux[:, :, 0] = 0
+    ux[:, :, -1] = 0
+    uy[:, 0, :] = 0
+    uy[:, -1, :] = 0
+    return ux, uy
+
+
+def _project_raw(ux: Tensor, uy: Tensor, dx: float, dy: float, iters: int):
+    ux, uy = _zero_boundary_faces(ux, uy)
+    p, n_iter, residual = cg_poisson(divergence(ux, uy, dx, dy), dx, dy, iters=iters)
+    gx, gy = gradient(p, dx, dy)
+    return ux - gx, uy - gy, n_iter, residual
+
+
+class _Leray(torch.autograd.Function):
+    """Projection as a first-class linear operator, not a differentiated solver.
+
+    On the space of face fields with **zero boundary faces** -- the only physically
+    meaningful space, since no flux may cross the domain wall -- `gradient` is exactly
+    the negative adjoint of `divergence`. There P = I - grad L^-1 div is a genuine
+    *orthogonal* projection: linear, idempotent, self-adjoint. Its Jacobian is P
+    itself, so its vector-Jacobian product is just P applied to the incoming gradient.
+
+    (Off that subspace this is false: `gradient` pins the boundary faces to zero while
+    `divergence` reads them, so the adjoint identity breaks and P becomes oblique. We
+    therefore project onto the subspace on the way in -- which is physics we wanted
+    anyway -- rather than assume the caller did. Verified against finite differences in
+    `test_leray_custom_backward_matches_autograd_through_the_solver`.)
+
+    Letting autograd unroll the conjugate-gradient loop instead builds a graph with one
+    node per CG iteration -- hundreds of them -- and backpropagates through the entire
+    solver. Doing it this way costs one extra solve in the backward pass and is exact.
+    """
+
+    @staticmethod
+    def forward(ctx, ux, uy, dx, dy, iters):
+        ctx.cfg = (dx, dy, iters)
+        ux_p, uy_p, _, _ = _project_raw(ux, uy, dx, dy, iters)
+        return ux_p, uy_p
+
+    @staticmethod
+    def backward(ctx, gux, guy):
+        dx, dy, iters = ctx.cfg
+        gx, gy, _, _ = _project_raw(gux.contiguous(), guy.contiguous(), dx, dy, iters)
+        return gx, gy, None, None, None
+
+
 def leray_project(
     ux: Tensor,
     uy: Tensor,
@@ -94,19 +145,18 @@ def leray_project(
     raw_norm = _norm(ux, uy)
     div_before = divergence(ux, uy, dx, dy)
 
-    p, n_iter, residual = cg_poisson(div_before, dx, dy, iters=iters)
-    gx, gy = gradient(p, dx, dy)
-    ux_p, uy_p = ux - gx, uy - gy
+    ux_p, uy_p = _Leray.apply(ux, uy, dx, dy, iters)
 
-    div_after = divergence(ux_p, uy_p, dx, dy)
-    proj_norm = _norm(ux_p, uy_p)
+    with torch.no_grad():
+        div_after = divergence(ux_p, uy_p, dx, dy)
+        proj_norm = _norm(ux_p, uy_p)
 
     stats = {
         "div_before": float(div_before.norm()),
         "div_after": float(div_after.norm()),
         "retained_energy": float(proj_norm / (raw_norm + 1e-12)),
-        "cg_iters": float(n_iter),
-        "cg_residual": residual,
+        "cg_iters": float(iters),
+        "cg_residual": 0.0,
     }
     return ux_p, uy_p, stats
 

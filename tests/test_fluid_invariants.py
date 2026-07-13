@@ -96,3 +96,39 @@ def test_projection_annihilates_a_pure_gradient_field():
     gx, gy = gradient(phi)
     _, _, stats = leray_project(gx, gy, iters=1000)
     assert stats["retained_energy"] < 0.05, stats["retained_energy"]
+
+
+def test_leray_custom_backward_matches_autograd_through_the_solver():
+    """The projector has a hand-written backward. Check it against finite differences.
+
+    Not against autograd-through-the-solver: that is a *reference*, not the truth, and
+    an early-terminating CG loop does not necessarily differentiate to the right thing.
+    Finite differences is the ground truth, so that is what we compare to.
+    """
+    from influid_pc.fluid.projection import _project_raw, _zero_boundary_faces, leray_project
+
+    torch.manual_seed(0)
+
+    def rand_field():
+        return _zero_boundary_faces(
+            torch.randn(1, 8, 9, dtype=torch.float64),
+            torch.randn(1, 9, 8, dtype=torch.float64),
+        )
+
+    ux0, uy0 = rand_field()
+    s0, s1 = rand_field()
+    d0, d1 = rand_field()
+
+    def loss(ux, uy):
+        px, py, _, _ = _project_raw(ux, uy, 1.0, 1.0, 600)
+        return (px * s0).sum() + (py * s1).sum()
+
+    eps = 1e-6
+    fd = (loss(ux0 + eps * d0, uy0 + eps * d1) - loss(ux0 - eps * d0, uy0 - eps * d1)) / (2 * eps)
+
+    a, b = ux0.clone().requires_grad_(True), uy0.clone().requires_grad_(True)
+    px, py, _ = leray_project(a, b, iters=600)
+    ((px * s0).sum() + (py * s1).sum()).backward()
+    ours = (a.grad * d0).sum() + (b.grad * d1).sum()
+
+    assert torch.allclose(ours, fd, rtol=1e-5), (float(ours), float(fd))
