@@ -241,21 +241,30 @@ the full effect"), so it deserves a straight answer in both directions.
 
 EMNIST-Letters, 26 classes, 20k train, **matched at 4 epochs** so the comparison is fair:
 
-| model | test acc | note |
-|---|---|---|
-| PC, 1×128 hidden | 63.54 | the small baseline |
-| **PC + fluid transport** | **68.98** | +5.4 over the small baseline |
-| PC + fluid + HJB | 64.82 | HJB *costs* 4.2 points |
-| **PC, 196-196-128 (capacity-matched, no fluid)** | **70.02** | **a plain MLP of the same size beats it** |
+| model | params | test acc | s/epoch |
+|---|---|---|---|
+| PC, 1×128 hidden | 103,834 | 63.54 | 4.5 |
+| **PC + fluid transport** | 192,128 | **68.98** | 180.4 |
+| PC + fluid + HJB | 192,129 | 64.82 | 217.0 |
+| **same net, fluid layer deleted** (784→196→128→26) | **182,430** | **70.14** | **8.5** |
 
-The +5.4-point gain from adding the transport layer looks impressive **until you control for
-capacity**. The fluid layer adds a 196-unit grid layer plus a stream network; give a *plain* MLP
-the same extra width and depth and it scores **70.02** — a point better than the fluid model, at
-roughly **1/20th the compute**.
+Adding the transport layer looks like a **+5.4-point win** over the small baseline — until you ask
+what the extra parameters alone would have bought. The last row is the exact same architecture with
+the fluid layer *removed and nothing put in its place*. It has **fewer parameters** (182k vs 192k),
+runs **21× faster**, and scores **1.2 points higher**.
 
-**So the honest conclusion is: on MNIST-like classification, the incompressible transport layer's
-accuracy gain is explained entirely by the parameters it adds, not by the transport.** We looked
-for this result to be otherwise and it is not. The HJB regulariser makes things actively worse.
+The same control on **Fashion-MNIST** (10 classes), to rule out an EMNIST artefact:
+
+| model | params | test acc | s/epoch |
+|---|---|---|---|
+| PC + fluid transport | 190,064 | 84.38 | 164.6 |
+| same net, fluid layer deleted | 180,366 | 84.26 | 8.1 |
+
+A **+0.12** difference — noise — for **20× the compute**.
+
+**The incompressible transport layer is strictly dominated on classification.** Its apparent gain
+is entirely explained by the width it adds, and the HJB regulariser costs a further 4.2 points on
+top. We went looking for this to come out the other way, on two datasets; it does not.
 
 ### At routing, it wins outright — and nothing else even functions
 

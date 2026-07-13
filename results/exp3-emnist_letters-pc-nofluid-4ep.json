@@ -1,0 +1,88 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "test_acc": 35.22,
+      "elapsed": 7.397969722747803,
+      "L0/dW": 0.1474330642114813,
+      "L1/dW": 0.31601195496777756,
+      "L2/dW": 1.1675868180994027,
+      "free_energy": 0.03871384618905025
+    },
+    {
+      "epoch": 2,
+      "test_acc": 60.5,
+      "elapsed": 15.726868391036987,
+      "L0/dW": 0.06700111820865363,
+      "L1/dW": 0.221842763665766,
+      "L2/dW": 0.9092575444009738,
+      "free_energy": 0.01848164481369737
+    },
+    {
+      "epoch": 3,
+      "test_acc": 65.9,
+      "elapsed": 23.976152658462524,
+      "L0/dW": 0.06262696931918209,
+      "L1/dW": 0.19222738479558651,
+      "L2/dW": 0.7970809040549464,
+      "free_energy": 0.01577038152482563
+    },
+    {
+      "epoch": 4,
+      "test_acc": 70.14,
+      "elapsed": 33.90269660949707,
+      "L0/dW": 0.06038724695341275,
+      "L1/dW": 0.18007476996785154,
+      "L2/dW": 0.7618972820976672,
+      "free_energy": 0.014254817322563059
+    }
+  ],
+  "final_acc": 70.14,
+  "params": 182430,
+  "config": {
+    "dataset": "emnist_letters",
+    "num_classes": null,
+    "data_root": "./data",
+    "train_subset": 20000,
+    "test_subset": 5000,
+    "batch_size": 64,
+    "epochs": 4,
+    "seed": 0,
+    "learner": "pc",
+    "hidden": [
+      196,
+      128
+    ],
+    "activation": "tanh",
+    "weight_lr": 0.1,
+    "momentum": 0.9,
+    "inference_steps": 24,
+    "inference_lr": 0.1,
+    "output_nudge": 0.2,
+    "prediction_mode": "fixed",
+    "fluid": false,
+    "fluid_grid": 14,
+    "fluid_steps": 8,
+    "fluid_dt": 0.5,
+    "fluid_cfl": 0.4,
+    "fluid_kappa": 0.0,
+    "fluid_lr": 0.001,
+    "velocity_mode": "stream",
+    "projection": false,
+    "readout": "scaled",
+    "obstacles": false,
+    "no_residual": false,
+    "hjb": false,
+    "hjb_weight": 0.01,
+    "hjb_nu": 0.01,
+    "transport_alpha": 0.001,
+    "transport_beta": 0.001,
+    "track_alignment": false,
+    "tag": "exp3-emnist_letters-pc-nofluid-4ep",
+    "out": null
+  },
+  "dataset": {
+    "name": "emnist_letters",
+    "num_classes": 26
+  }
+}

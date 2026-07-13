@@ -1,0 +1,88 @@
+{
+  "history": [
+    {
+      "epoch": 1,
+      "test_acc": 80.92,
+      "elapsed": 7.556632041931152,
+      "L0/dW": 0.14939287247749183,
+      "L1/dW": 0.1905304312039488,
+      "L2/dW": 0.3728342086743242,
+      "free_energy": 0.01861682561592172
+    },
+    {
+      "epoch": 2,
+      "test_acc": 83.02,
+      "elapsed": 15.067084789276123,
+      "L0/dW": 0.06860546912914647,
+      "L1/dW": 0.10485729758446209,
+      "L2/dW": 0.24088560735074857,
+      "free_energy": 0.00764326679672058
+    },
+    {
+      "epoch": 3,
+      "test_acc": 82.88,
+      "elapsed": 23.91057777404785,
+      "L0/dW": 0.06461028085825161,
+      "L1/dW": 0.09213395175128318,
+      "L2/dW": 0.2122287491735178,
+      "free_energy": 0.006745398420983324
+    },
+    {
+      "epoch": 4,
+      "test_acc": 84.26,
+      "elapsed": 32.25874924659729,
+      "L0/dW": 0.06144717247627033,
+      "L1/dW": 0.08767929970742033,
+      "L2/dW": 0.1951175616524471,
+      "free_energy": 0.006275236664619595
+    }
+  ],
+  "final_acc": 84.26,
+  "params": 180366,
+  "config": {
+    "dataset": "fashion",
+    "num_classes": null,
+    "data_root": "./data",
+    "train_subset": 20000,
+    "test_subset": 5000,
+    "batch_size": 64,
+    "epochs": 4,
+    "seed": 0,
+    "learner": "pc",
+    "hidden": [
+      196,
+      128
+    ],
+    "activation": "tanh",
+    "weight_lr": 0.1,
+    "momentum": 0.9,
+    "inference_steps": 24,
+    "inference_lr": 0.1,
+    "output_nudge": 0.2,
+    "prediction_mode": "fixed",
+    "fluid": false,
+    "fluid_grid": 14,
+    "fluid_steps": 8,
+    "fluid_dt": 0.5,
+    "fluid_cfl": 0.4,
+    "fluid_kappa": 0.0,
+    "fluid_lr": 0.001,
+    "velocity_mode": "stream",
+    "projection": false,
+    "readout": "scaled",
+    "obstacles": false,
+    "no_residual": false,
+    "hjb": false,
+    "hjb_weight": 0.01,
+    "hjb_nu": 0.01,
+    "transport_alpha": 0.001,
+    "transport_beta": 0.001,
+    "track_alignment": false,
+    "tag": "exp3-fashion-pc-nofluid-4ep",
+    "out": null
+  },
+  "dataset": {
+    "name": "fashion",
+    "num_classes": 10
+  }
+}

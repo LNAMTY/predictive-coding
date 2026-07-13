@@ -27,7 +27,7 @@ influid_pc/
 | **Fluid transport invariants** | mass drift `1e-7`, `div u ≈ 1e-6`, CFL pinned to 0.40, exactly 0 flux into obstacles |
 | **Routing task (the paper's §8)** | **54%** of the budget delivered vs **0.05%** for diffusion, **0%** for raw-gradient+projection |
 | **Paper's κ=0.3 diffusion warmup** | **harmful for classification** — collapses a linear probe to chance in one step |
-| **Fluid layer on EMNIST, capacity-matched** | **loses** to a plain MLP of the same size, at 20× the compute |
+| **Fluid layer on EMNIST** | **loses** to the same net with the layer deleted — fewer params, 21× faster |
 
 Two of these contradict the paper, and one of them is a one-line fix. The detailed argument, with
 the experiment behind every number, is in **[docs/FINDINGS.md](docs/FINDINGS.md)** — that is the
@@ -70,6 +70,14 @@ above, and computes a local error. Inference relaxes the states; learning is Heb
 rules are derived by hand, so "no backpropagation" is a property of the code, not a claim in a
 README. `tests/test_pc_vs_backprop.py` checks the hand-written backward reference against autograd,
 then checks PC against *that*.
+
+There are deliberately two implementations, and they agree:
+
+* `pc/core.py` — a single self-contained class. **Read this one first**: the whole algorithm is
+  ~150 lines with the maths in the docstring, and it depends on nothing else in the repo.
+* `pc/network.py` + `pc/connections.py` — the same algorithm with each edge behind a `Connection`
+  interface, which is what lets the fluid layer drop in without the PC rules changing. This is what
+  `train.py` uses.
 
 Two inference modes, and the difference between them turns out to matter a great deal:
 
