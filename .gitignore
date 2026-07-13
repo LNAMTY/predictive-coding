@@ -3,3 +3,9 @@ data/
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# results/ holds the curated experiment grid; ad-hoc runs from `make` land here too
+results/*.json
+!results/exp*.json
+!results/alignment.json
+!results/routing_task.json

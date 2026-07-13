@@ -34,25 +34,28 @@ pc:
 classes:
 	@for k in 2 3 5 10; do \
 	  $(PY) train.py --dataset mnist --num-classes $$k --epochs 8 \
+	    --train-subset 20000 --test-subset 5000 \
 	    --hidden 256 128 --weight-lr 0.1 --track-alignment; \
 	done
 
 deep:
 	@for mode in strict fixed; do \
 	  $(PY) train.py --dataset mnist --prediction-mode $$mode --epochs 8 \
+	    --train-subset 20000 --test-subset 5000 --inference-steps 32 \
 	    --hidden 128 128 128 128 128 128 --weight-lr 0.1 --track-alignment; \
 	done
 
 fluid:
 	$(PY) train.py --dataset emnist_letters --fluid --epochs 4 \
-	  --weight-lr 0.1 --fluid-lr 0.01
+	  --train-subset 20000 --test-subset 5000 --weight-lr 0.1 --fluid-lr 0.01
 
 hjb:
 	$(PY) train.py --dataset emnist_letters --fluid --hjb --epochs 4 \
-	  --weight-lr 0.1 --fluid-lr 0.01
+	  --train-subset 20000 --test-subset 5000 --weight-lr 0.1 --fluid-lr 0.01
 
 bp:
-	$(PY) train.py --learner bp --dataset mnist --epochs 8 --hidden 256 128
+	$(PY) train.py --learner bp --dataset mnist --epochs 8 \
+	  --train-subset 20000 --test-subset 5000 --hidden 256 128
 
 # -- studies -------------------------------------------------------------------
 
