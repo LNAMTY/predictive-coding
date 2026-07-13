@@ -66,11 +66,11 @@ And it is not a cosmetic misalignment — **test accuracy tracks it** (MNIST, 20
 
 | hidden layers | backprop | PC (fixed) | PC (strict) | cos(strict) |
 |---|---|---|---|---|
-| 1 | 96.0 | 94.2 | 94.9 | 0.998 |
-| 2 | 95.5 | 95.3 | 95.3 | 0.979 |
-| 3 | 96.4 | 94.7 | 94.7 | 0.928 |
-| 4 | 96.3 | 95.2 | 93.4 | 0.857 |
-| 6 | 96.6 | **94.3** | **90.8** | **0.676** |
+| 1 | 94.34 | 94.18 | 94.86 | 0.998 |
+| 2 | 95.60 | 95.26 | 95.32 | 0.979 |
+| 3 | 96.40 | 94.68 | 94.70 | 0.927 |
+| 4 | 96.28 | 95.22 | 93.42 | 0.857 |
+| 6 | 96.62 | **94.28** | **90.78** | **0.676** |
 
 Strict PC loses **3.5 points** to fixed-prediction PC at 6 hidden layers, and the gap is still
 widening. Fixed-prediction PC stays within ~2 points of backprop at every depth.
