@@ -139,7 +139,21 @@ class IncompressibleRouting(nn.Module):
         ux, uy = self._apply_walls(ux, uy)
 
         proj_energy = (ux.pow(2).sum() + uy.pow(2).sum()).sqrt()
-        stats["retained_energy"] = float(proj_energy / (raw_energy + 1e-12))
+        retained = float(proj_energy / (raw_energy + 1e-12))
+        stats["retained_energy"] = retained
+
+        # If the projector annihilated the drift (which is what it does to a raw
+        # gradient field), what is left is floating-point noise. Rescaling *that* to
+        # hit a target Courant number amplifies it by ~1e9 and hands back a "velocity"
+        # that is not even divergence-free -- measured: div 0.96 versus 6e-07 for a
+        # stream function. The CFL step is only safe on a field that actually exists.
+        collapsed = retained < 1e-6
+        stats["collapsed"] = float(collapsed)
+        if collapsed:
+            stats["cfl_pre_rescale"] = 0.0
+            stats["cfl"] = 0.0
+            stats["div_final"] = float(divergence(ux, uy).norm())
+            return ux, uy, stats
 
         ux, uy, cfl_pre = rescale_to_cfl(ux, uy, self.dt, self.target_cfl)
         stats["cfl_pre_rescale"] = float(cfl_pre.mean())

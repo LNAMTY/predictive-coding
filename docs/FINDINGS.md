@@ -292,6 +292,30 @@ the strongest confirmation in the repo of the paper's most important practical w
 why the stream-function parameterisation is not a stylistic preference but the thing that makes the
 method work at all.
 
+### A trap the paper does not warn about: CFL rescaling resurrects the noise
+
+There is a second-order failure here that we did not expect and have not seen stated anywhere.
+
+Once the projector has annihilated your drift, what remains is not zero — it is **floating-point
+noise**, around `5e-10`. The paper then tells you to rescale `u` to hit a target Courant number.
+Applied to noise, that rescale multiplies it by ~**10⁹**, and hands you back a field that *looks*
+like a perfectly reasonable velocity:
+
+| velocity source | retained energy | ‖div u‖ after the CFL rescale |
+|---|---|---|
+| stream function | 1.0000 | **5.9e-07** |
+| raw gradient + projection | 0.0000 | **0.96** |
+
+The resurrected field is **not even divergence-free** — the amplified rounding error is not in the
+solenoidal subspace, and it swamps the projector's own accuracy by orders of magnitude. So the naive
+route does not fail loudly by producing a zero wind; it fails *quietly*, by producing a **fake,
+divergent wind made entirely of rounding error**, while every diagnostic except `retained_energy`
+looks healthy.
+
+`fluid/layer.py` now detects the collapse (`retained_energy < 1e-6`) and refuses to rescale, so the
+layer degenerates honestly to the identity instead. **If you implement In-Fluid-Net the naive way
+and only monitor CFL and divergence, you will not notice any of this.** Monitor `retained_energy`.
+
 ### Where that leaves In-Fluid-Net
 
 The mechanism does what it claims — conserves mass exactly, routes around hard obstacles, stays
