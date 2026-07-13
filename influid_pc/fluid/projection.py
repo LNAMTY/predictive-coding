@@ -16,7 +16,7 @@ is visible rather than mysterious.
 
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 import torch
 from torch import Tensor

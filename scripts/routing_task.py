@@ -34,7 +34,6 @@ import numpy as np
 import torch
 
 from influid_pc.fluid.advection import advect, renormalise, total_mass
-from influid_pc.fluid.nets import StreamNet, ValueNet
 from influid_pc.fluid.operators import (
     cfl_number,
     curl_from_stream,
@@ -264,7 +263,7 @@ def main() -> None:
     fig.tight_layout()
     (ROOT / "figures").mkdir(exist_ok=True)
     fig.savefig(ROOT / "figures" / "fig5_routing_task.png", dpi=170, bbox_inches="tight")
-    print(f"wrote figures/fig5_routing_task.png")
+    print("wrote figures/fig5_routing_task.png")
 
 
 if __name__ == "__main__":

@@ -24,9 +24,8 @@ coding instead of smuggling a global gradient back in.
 
 from __future__ import annotations
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
-import torch
 from torch import Tensor
 
 from ..fluid.operators import gradient, laplacian_cell

@@ -10,7 +10,6 @@ negative gradient is the raw drift, and on which the HJB residual is evaluated.
 
 from __future__ import annotations
 
-import torch
 import torch.nn as nn
 from torch import Tensor
 

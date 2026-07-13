@@ -7,7 +7,11 @@ story, so it gets a test, not a paragraph.
 import pytest
 import torch
 
-from influid_pc.diagnostics.bp_alignment import alignment_report, backprop_gradients, nudge_sweep
+from influid_pc.diagnostics.bp_alignment import (
+    alignment_report,
+    backprop_gradients,
+    nudge_sweep,
+)
 from influid_pc.pc.core import PCConfig, PredictiveCodingNet
 
 torch.manual_seed(0)

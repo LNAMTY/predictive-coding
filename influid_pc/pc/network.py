@@ -13,7 +13,7 @@ from typing import Dict, List, Optional, Sequence
 import torch
 from torch import Tensor
 
-from .connections import Connection, LinearConnection
+from .connections import Connection
 
 
 @dataclass

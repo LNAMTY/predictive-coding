@@ -25,7 +25,7 @@ what `diagnostics/bp_alignment.py` independently verifies against true backprop.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Sequence
 
 import torch

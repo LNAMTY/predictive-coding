@@ -27,11 +27,10 @@ from pathlib import Path
 from typing import Dict, List
 
 import torch
-import torch.nn.functional as F
 
 from influid_pc import data
 from influid_pc.build import ModelSpec, build
-from influid_pc.diagnostics.bp_alignment import _cosine, backprop_gradients
+from influid_pc.diagnostics.bp_alignment import _cosine
 from influid_pc.pc.connections import LinearConnection
 from influid_pc.pc.network import PCNetwork, PCTrainConfig
 

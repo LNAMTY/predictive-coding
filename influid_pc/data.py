@@ -19,7 +19,7 @@ from typing import Optional, Tuple
 
 import torch
 from torch import Tensor
-from torch.utils.data import DataLoader, Subset, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset
 from torchvision import datasets, transforms
 
 DATASETS = {

@@ -13,7 +13,6 @@ Run:  PYTHONPATH=. .venv/bin/python scripts/run_experiments.py [exp1 exp2 ...]
 
 from __future__ import annotations
 
-import itertools
 import json
 import subprocess
 import sys
