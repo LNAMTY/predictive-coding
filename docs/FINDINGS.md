@@ -28,10 +28,10 @@ so as the output nudge `γ → 0` the cosine should go to 1.
 
 | output nudge γ | strict PC | fixed-prediction PC |
 |---|---|---|
-| 1.0   | 0.970 | 0.999 |
-| 0.1   | 0.985 | 0.99975 |
-| 0.01  | 0.985 | 0.999996 |
-| 0.001 | **0.985 (plateau)** | **1.000000** |
+| 1.0   | 0.9722 | 0.9779 |
+| 0.1   | 0.9858 | 0.9998 |
+| 0.01  | 0.9859 | **1.000000** |
+| 0.001 | **0.9859 (plateau)** | **1.000000** |
 
 Inference is genuinely converged in both cases — the fixed-point residual falls to `~1e-6`. Strict
 PC simply converges *somewhere else*.
@@ -59,21 +59,21 @@ Cosine against the true gradient, as the network gets deeper:
 | hidden layers | strict PC | fixed-prediction PC |
 |---|---|---|
 | 1 | 0.991 | 1.000 |
-| 2 | 0.985 | 1.000 |
-| 3 | 0.975 | 1.000 |
+| 2 | 0.986 | 1.000 |
+| 3 | 0.973 | 1.000 |
 | 4 | 0.943 | 1.000 |
-| 6 | 0.815 | 1.000 |
-| 8 | **0.756** | **1.000** |
+| 6 | 0.811 | 1.000 |
+| 8 | **0.752** | **1.000** |
 
 And it is not a cosmetic misalignment — **test accuracy tracks it** (MNIST, 20k train, 8 epochs):
 
 | hidden layers | backprop | PC (fixed) | PC (strict) | cos(strict) |
 |---|---|---|---|---|
-| 1 | 94.34 | 94.18 | 94.86 | 0.998 |
-| 2 | 95.60 | 95.26 | 95.32 | 0.979 |
-| 3 | 96.40 | 94.68 | 94.70 | 0.927 |
-| 4 | 96.28 | 95.22 | 93.42 | 0.857 |
-| 6 | 96.62 | **94.28** | **90.78** | **0.676** |
+| 1 | 94.34 | 94.18 | 94.86 | 0.991 |
+| 2 | 95.60 | 95.26 | 95.32 | 0.986 |
+| 3 | 96.40 | 94.68 | 94.70 | 0.973 |
+| 4 | 96.28 | 95.22 | 93.42 | 0.943 |
+| 6 | 96.62 | **94.28** | **90.78** | **0.811** |
 
 Strict PC loses **3.5 points** to fixed-prediction PC at 6 hidden layers, and the gap is still
 widening. Fixed-prediction PC stays within ~2 points of backprop at every depth.
@@ -83,7 +83,7 @@ purchased with the Fixed Prediction Assumption. If you implement PC literally as
 §4.2 three-phase loop describes (recomputing predictions from relaxed states), the gradient you
 get is a systematically biased one, and the bias grows with exactly the depth you were hoping to
 scale to. **Anyone building on this paper should freeze predictions during relaxation.** It is a
-one-line change and it is the difference between cosine 0.76 and cosine 1.00 at 8 layers.
+one-line change and it is the difference between cosine 0.75 and cosine 1.00 at 8 layers.
 
 ```bash
 PYTHONPATH=. .venv/bin/python scripts/run_experiments.py exp1
@@ -165,10 +165,10 @@ test time.
 
 | the paper says | verdict | we find |
 |---|---|---|
-| PC gradients match the global gradient at convergence | **partly** | Only under the Fixed Prediction Assumption. Strict PC plateaus at cosine 0.985 and **decays to 0.76 by 8 layers**, costing 3.5 points of accuracy. |
+| PC gradients match the global gradient at convergence | **partly** | Only under the Fixed Prediction Assumption. Strict PC plateaus at cosine 0.986 and **decays to 0.75 by 8 layers**, costing 3.5 points of accuracy. |
 | Local learning eliminates the backprop chain | **confirmed** | Verified in code: `torch.autograd` is patched to raise and the network trains anyway. |
 
 **The thing worth acting on: freeze the predictions during relaxation.** It is a one-line change,
 and it is the difference between a credit-assignment rule that holds at 8 layers (cosine 1.000) and
-one that quietly degrades (0.756). Anyone building on §4.2 of the paper as written is training on a
+one that quietly degrades (0.752). Anyone building on §4.2 of the paper as written is training on a
 biased gradient without knowing it.

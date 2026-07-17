@@ -51,6 +51,10 @@ def cosine_for(net, x, t):
 
 
 def main() -> None:
+    # The probe batch comes off a shuffling DataLoader, which draws from the global RNG.
+    # Without this the whole study lands on a different batch every run and the cosines
+    # move in the third decimal.
+    torch.manual_seed(0)
     bundle = data.load("mnist", train_subset=512, batch_size=256)
     x, y = next(iter(bundle.train))
     t = data.one_hot(y, 10)

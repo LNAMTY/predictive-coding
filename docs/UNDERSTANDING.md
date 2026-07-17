@@ -110,7 +110,7 @@ Two ways to handle it:
 
 They sound almost identical. They are not. **Only `fixed` recovers the backprop gradient.** `strict`
 converges to a systematically different answer, and the error grows with depth — at 8 hidden layers
-its update has cosine **0.756** with the true gradient, and it loses real accuracy for it. See
+its update has cosine **0.752** with the true gradient, and it loses real accuracy for it. See
 [FINDINGS.md](FINDINGS.md) §1–2. This is the single most useful thing in this repo.
 
 ---
