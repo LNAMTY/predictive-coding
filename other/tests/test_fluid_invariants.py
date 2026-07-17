@@ -72,6 +72,41 @@ def test_advection_conserves_mass_exactly():
     assert drift < 1e-12, drift
 
 
+def test_diffusion_conserves_mass_with_obstacles():
+    """Diffusion and obstacles together: the case each of the tests above misses.
+
+    `test_advection_conserves_mass_exactly` runs kappa > 0 on an open grid, and
+    `test_obstacles_are_no_through` runs obstacles at kappa = 0. Between them they let a
+    leak through: an unmasked Laplacian diffuses mass into blocked cells, which `advect`
+    then zeroes, destroying ~30% of the budget over a rollout.
+    """
+    free = torch.ones(H, W, dtype=torch.bool)
+    free[6:18, 10:13] = False
+    free[15:17, 4:20] = False
+
+    psi = torch.randn(B, H + 1, W + 1, dtype=torch.float64) * node_mask_from_cells(free)
+    ux, uy = curl_from_stream(psi)
+    ux, uy, _ = rescale_to_cfl(ux, uy, dt=0.5, target=0.4)
+
+    rho = renormalise(torch.rand(B, H, W, dtype=torch.float64) * free)
+    m0 = total_mass(rho)
+    for _ in range(50):
+        rho = advect(rho, ux, uy, dt=0.5, kappa=0.3, free_cell=free)
+
+    assert (total_mass(rho) - m0).abs().max() < 1e-12, (total_mass(rho) - m0).abs().max()
+    assert rho[:, ~free].abs().max() == 0
+
+
+def test_masked_diffusion_reduces_to_the_plain_laplacian_on_an_open_grid():
+    from other.fluid.advection import diffusion
+    from other.fluid.operators import laplacian_cell
+
+    rho = torch.rand(B, H, W, dtype=torch.float64)
+    free = torch.ones(H, W, dtype=torch.bool)
+    assert torch.allclose(diffusion(rho, free_cell=None), laplacian_cell(rho))
+    assert torch.allclose(diffusion(rho, free_cell=free), laplacian_cell(rho))
+
+
 def test_cfl_targeting_hits_the_target():
     psi = torch.randn(B, H + 1, W + 1, dtype=torch.float64)
     ux, uy = curl_from_stream(psi)

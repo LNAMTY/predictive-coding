@@ -29,7 +29,9 @@ That is the paper's "budget faithfulness".
 The first two terms say: the density at a point changes only because stuff *flowed in or out*. It
 cannot appear from nowhere. Discretely, we compute the flux across each cell face and subtract what
 leaves from what arrives. Sum over all cells and the interior fluxes cancel in pairs — so total mass
-is conserved **exactly**, not approximately. (`fluid/advection.py`.)
+is conserved **exactly**, not approximately. The diffusion term on the right is masked to the open
+faces for the same reason, so that conservation survives on a grid with obstacles in it.
+(`fluid/advection.py`.)
 
 **2. Incompressibility (`∇·u = 0`).**
 
@@ -66,6 +68,10 @@ of the wall has *equal `ψ` at both endpoints*, so the velocity across it is exa
 no-through boundary. And because the field is still a curl, it is still divergence-free. You get
 walls for free, with no special-casing. This is elegant and it is the kind of thing that makes the
 staggered-grid formulation worth the bookkeeping.
+
+The one place this does *not* come for free is diffusion, which is not built from `ψ` at all: it
+needs its flux masked to the open faces explicitly, or it leaks mass into the walls.
+(`fluid/advection.py: diffusion`.)
 
 **Where it lives:** `other/fluid/`. Remove the directory and nothing on the PC path breaks.
 

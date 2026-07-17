@@ -138,13 +138,20 @@ But classification is not the task In-Fluid-Net was designed for. The paper's ow
 mass-conserving transport should matter. We reproduced it (24×24 grid, seed at top-left, target
 band bottom-right, a pillar and a bar in the way) and — unlike the paper — ran baselines:
 
-| mechanism | band mass ↑ | E[distance] ↓ | ‖div u‖ | CFL |
-|---|---|---|---|---|
-| isotropic diffusion | 0.0005 | 12.67 | 0 | 0 |
-| raw gradient + Leray projection | **0.0000** | 22.00 | ~0 | 0 |
-| **stream function + greedy controller** | **0.5400** | **2.64** | 9e-07 | 0.40 |
+| mechanism | band mass ↑ | E[distance] ↓ | ‖div u‖ | CFL | final mass |
+|---|---|---|---|---|---|
+| isotropic diffusion | 0.0035 | 17.13 | 0 | 0 | 1.0000 |
+| raw gradient + Leray projection | **0.0000** | 22.00 | ~0 | 0 | 1.0000 |
+| **stream function + greedy controller** | **0.5400** | **2.64** | 9e-07 | 0.40 | 1.0000 |
 
-**54% of the entire budget is delivered into the band.** Diffusion delivers 0.05% — it spreads
+The last column is the control that makes the comparison meaningful: all three mechanisms end with
+the **entire budget still on the grid**, so the band-mass column is measuring where the mass went,
+not how much of it was lost along the way. (An earlier version of this table read 0.0005 for
+diffusion, because the diffusion operator was leaking mass into the obstacle cells and the advection
+step was deleting it — the baseline was being handicapped by a bug, in the direction that flattered
+our own conclusion. Fixed; see `fluid/advection.py::diffusion`.)
+
+**54% of the entire budget is delivered into the band.** Diffusion delivers 0.35% — it spreads
 into the nearest corner and never arrives, exactly the failure the paper's introduction describes.
 
 ![routing](../figures/fig5_routing_task.png)
@@ -203,7 +210,7 @@ it will win, and win big.
 | Parameterise inside the divergence-free subspace; projection is a safety net | **confirmed** | Emphatically. The projector destroys **100%** of an ideal raw-gradient drift. A stream function retains 100% and makes the projector a no-op (and 3.3× faster). |
 | Anneal diffusion κ: 0.3 → 0 to "explore then sharpen" | **does not transfer** | Not to classification, where the density *is* the signal, and κ=0.3 drives a linear probe to chance in one step. A **residual** wrapper makes the layer safe and defuses κ entirely (and makes it pointless). |
 | Target CFL ∈ [0.3, 0.45] | **confirmed** | And free to enforce exactly, since a per-sample rescale cannot introduce divergence. |
-| Incompressible transport beats undirected diffusion for routing | **confirmed** | Quantified: 54% of the budget delivered vs 0.05% for diffusion. |
+| Incompressible transport beats undirected diffusion for routing | **confirmed** | Quantified: 54% of the budget delivered vs 0.35% for diffusion, at equal budget. |
 | (implied) this should make a better network | **not at classification** | At matched capacity a plain MLP beats the fluid layer at 1/20th the cost. HJB regularisation makes it worse still. |
 
 **The thing worth acting on: stop evaluating In-Fluid-Net on classification.** The transport

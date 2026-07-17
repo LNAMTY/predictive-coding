@@ -1,10 +1,10 @@
 {
   "diffusion": {
-    "band_mass": 0.0004852457204833627,
-    "expected_distance": 12.669955253601074,
+    "band_mass": 0.0035146072041243315,
+    "expected_distance": 17.126379013061523,
     "div_norm": 0.0,
     "cfl": 0.0,
-    "mass": 0.7019041776657104
+    "mass": 0.9999999403953552
   },
   "raw-gradient + projection": {
     "band_mass": 0.0,

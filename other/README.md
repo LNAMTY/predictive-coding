@@ -58,7 +58,28 @@ In [`docs/FINDINGS.md`](docs/FINDINGS.md). The short version:
   projector destroys **100%** of an ideal `−∇W` drift. Parameterise inside the solenoidal subspace.
 * The paper's κ = 0.3 diffusion warm-up **does not transfer** to classification, and the residual
   wrapper — not the κ value — is what makes the layer safe to insert at all.
-* On **routing** the layer wins outright: 54% of the budget delivered, vs 0.05% for diffusion and 0%
+* On **routing** the layer wins outright: 54% of the budget delivered, vs 0.35% for diffusion and 0%
   for raw-gradient + projection.
 * On **classification** it is strictly dominated: at matched capacity a plain layer beats it, 21×
   faster.
+
+## A correction worth reading
+
+The routing table originally reported **0.0005** band mass for the diffusion baseline. That was
+wrong, and it was wrong in the direction that flattered my own conclusion.
+
+`laplacian_cell` enforces zero flux at the domain border but knows nothing about obstacles, so the
+diffusion term pushed mass across obstacle walls into blocked cells, which the advection step then
+deleted — destroying ~30% of the budget over a rollout, in a task whose whole premise is a *conserved*
+budget. The stream-function and raw-gradient routes were unaffected (they run at κ = 0), so the one
+mechanism silently losing mass was the baseline I was arguing against.
+
+Fixed in `fluid/advection.py::diffusion`, which masks the diffusive flux to the open faces using
+`face_masks_from_cells` — a helper that already existed in `operators.py` and had never been wired
+up. Diffusion now conserves mass exactly and delivers **0.0035**, seven times more than reported.
+The conclusion is unchanged: the stream function still wins by ~150×.
+
+The tests missed it because they covered κ > 0 *without* obstacles
+(`test_advection_conserves_mass_exactly`) and obstacles *without* κ
+(`test_obstacles_are_no_through_and_still_divergence_free`), and never both.
+`test_diffusion_conserves_mass_with_obstacles` now covers that cell.

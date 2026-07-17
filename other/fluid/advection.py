@@ -13,7 +13,8 @@ structurally rather than approximately:
   * Positivity. Upwind flux takes mass from the donor cell only, so under CFL <= 1
     no cell can be driven negative and rho remains interpretable as a mass.
 
-Diffusion uses the same Neumann Laplacian, which is also exactly conservative.
+Diffusion is a difference of face fluxes for the same reason, and is masked to the
+open faces so that it conserves mass on a grid with obstacles too.
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from typing import Optional, Tuple
 import torch
 from torch import Tensor
 
-from .operators import laplacian_cell
+from .operators import divergence, face_masks_from_cells, gradient
 
 
 def upwind_fluxes(rho: Tensor, ux: Tensor, uy: Tensor) -> Tuple[Tensor, Tensor]:
@@ -47,6 +48,24 @@ def upwind_fluxes(rho: Tensor, ux: Tensor, uy: Tensor) -> Tuple[Tensor, Tensor]:
     return flux_x, flux_y
 
 
+def diffusion(
+    rho: Tensor, dx: float = 1.0, dy: float = 1.0, free_cell: Optional[Tensor] = None
+) -> Tensor:
+    """lap(rho), with zero flux through the domain wall and through obstacle faces.
+
+    `laplacian_cell` closes only the domain border, so on a grid with obstacles it
+    diffuses mass into blocked cells, which `advect` then deletes -- a silent leak.
+    Masking the diffusive flux to the open faces keeps the step a difference of face
+    fluxes, so it still telescopes to zero, and no face touching a blocked cell carries
+    anything. With no obstacles this is exactly `laplacian_cell`.
+    """
+    gx, gy = gradient(rho, dx, dy)
+    if free_cell is not None:
+        fx, fy = face_masks_from_cells(free_cell)
+        gx, gy = gx * fx, gy * fy
+    return divergence(gx, gy, dx, dy)
+
+
 def advect(
     rho: Tensor,
     ux: Tensor,
@@ -67,7 +86,7 @@ def advect(
     rho_new = rho - dt * div_flux
 
     if kappa > 0:
-        rho_new = rho_new + dt * kappa * laplacian_cell(rho, dx, dy)
+        rho_new = rho_new + dt * kappa * diffusion(rho, dx, dy, free_cell)
 
     if free_cell is not None:
         rho_new = rho_new * free_cell
