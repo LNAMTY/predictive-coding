@@ -1,63 +1,144 @@
-# In-Fluid-PC
+# Predictive coding vs backpropagation
 
-Predictive coding trained without backpropagation, and a measurement of exactly when it does and
-does not equal the backprop gradient.
+Predictive coding trained without backpropagation, and a measurement of **exactly when its update
+equals the backprop gradient and when it does not**.
 
-Alongside it, in [`other/`](other/), a from-scratch implementation of *Incompressible-Fluid Networks*
-(Goertzel, Oct 2025) — Navier–Stokes transport, Helmholtz–Hodge projection, and Hamilton–Jacobi–Bellman
-regularisation.
+Three learners, one architecture, one dataset, so the only thing that varies is the credit
+assignment rule:
 
-This is my submission for the training task:
+| | how it assigns credit |
+|---|---|
+| **backprop** | the usual global backward chain — the reference |
+| **PC (strict)** | predictions recomputed from the relaxed states each step — predictive coding as the paper specifies it |
+| **PC (fixed)** | predictions frozen at their feedforward values — the Fixed Prediction Assumption |
+
+**The headline: only one of the two PC variants actually recovers the backprop gradient, and the
+paper specifies the other one.**
+
+---
+
+## 1. Do the gradients match?
+
+Freeze the weights, take one batch, and measure the cosine between the update predictive coding
+produces from purely local signals and the gradient backprop would produce. Theory says that as the
+output nudge `γ → 0` the cosine should go to 1.
+
+| output nudge γ | PC (strict) | PC (fixed) |
+|---|---|---|
+| 1.0 | 0.9722 | 0.9779 |
+| 0.1 | 0.9858 | 0.9998 |
+| 0.01 | 0.9859 | **1.000000** |
+| 0.001 | **0.9859 — plateau** | **1.000000** |
+
+Strict PC **never gets there**. Inference is genuinely converged in both cases — the fixed-point
+residual falls to `~1e-6` — strict PC simply converges somewhere else, and shrinking `γ` does not
+close the gap.
+
+**Why.** At the PC fixed point the hidden-state displacement and the error signal are *both* `O(γ)`.
+Relaxing the states perturbs the top-down prediction at the same order as the signal that prediction
+is carrying — the signal contaminates its own carrier — so shrinking `γ` shrinks both together and
+the ratio never improves. The bias is structural, not a small-nudge artefact. Freezing the
+predictions severs exactly that feedback loop, and the recursion collapses onto backprop's.
+
+```bash
+make alignment      # ~3 min
+```
+
+## 2. Does it matter? Yes — it costs real accuracy
+
+The misalignment is not cosmetic, and it compounds with depth, which is precisely the regime the
+whole idea is meant to scale to (MNIST, 20k train, 8 epochs):
+
+| hidden layers | backprop | PC (fixed) | PC (strict) | cos(strict, BP) |
+|---|---|---|---|---|
+| 1 | 94.34 | 94.18 | 94.86 | 0.991 |
+| 2 | 95.60 | 95.26 | 95.32 | 0.986 |
+| 3 | 96.40 | 94.68 | 94.70 | 0.973 |
+| 4 | 96.28 | 95.22 | 93.42 | 0.943 |
+| 6 | 96.62 | **94.28** | **90.78** | **0.811** |
+
+At 8 hidden layers strict PC's update is down to cosine **0.752** with the true gradient. It loses
+**3.5 points** to fixed-prediction PC at 6 layers and the gap is still widening. Fixed-prediction PC
+stays within ~2 points of backprop at every depth.
+
+![alignment](figures/fig1_alignment.png)
+
+```bash
+make deep           # ~5 min
+```
+
+## 3. What this contradicts
+
+The paper's abstract promises "an envelope theorem proving that predictive coding gradients match
+the global objective gradient at convergence". **That holds only under the Fixed Prediction
+Assumption**, which the paper never states — it comes from Millidge et al. (2020) §2. Implemented
+literally as the paper's §4.2 three-phase loop describes, PC trains on a systematically biased
+gradient, and the bias grows with depth.
+
+It is a one-line change:
+
+```bash
+python train.py --prediction-mode strict   # cosine 0.752 at 8 layers
+python train.py --prediction-mode fixed    # cosine 1.000 at 8 layers
+```
+
+## 4. Where to look in the code
+
+If you read three things, read these:
+
+| file | what it is |
+|---|---|
+| **`influid_pc/pc/core.py`** | the whole algorithm in one class, ~150 lines, mathematics in the docstring, imports nothing else from this repo. **Start here.** |
+| **`influid_pc/diagnostics/bp_alignment.py`** | the comparison itself. The backprop reference is a hand-written backward sweep over the same forward equations, so this compares two *learning rules on one model* rather than two models. |
+| **`influid_pc/pc/network.py`** | the same algorithm with every edge behind a `Connection`. `train.py` uses this one. |
+
+The strict/fixed switch lives at `pc/core.py:115` and `pc/network.py:74`. The Fixed Prediction
+Assumption itself is the two lines at `pc/core.py:125-126` — the predictions and their local
+derivatives are computed from the feedforward pass and never see the relaxed states.
+
+**No backpropagation is a property of the code, not a claim in a README.** The linear connections
+never call autograd — the update rules are derived by hand — and `tests/test_locality.py` patches
+`torch.autograd` to raise an exception, then trains the network to convergence anyway.
+
+---
+
+## How I met the task
 
 > Train PC with different classification (current MNIST 10 class). + Navier-Stokes (fluid dynamics),
 > use a dataset other than MNIST with a different class count.
 
-I built predictive coding first, on its own, and then added each piece of the paper on top of it as
-a component I can switch off independently. The point was to be able to defend every line I keep.
-Along the way I found two things that contradict the paper, and one of them is a one-line fix.
-
-**The predictive-coding half is the presented result, and it is what the root of this repo is.** The
-In-Fluid-Net half is complete and still runs, but it sits under `other/` so that the thing I am
-claiming is not mixed up with the thing I am reporting. See [`other/README.md`](other/README.md).
-
-## How I met the task
-
 | what was asked | what I ran | result |
 |---|---|---|
-| PC on a **different classification** than MNIST-10 | MNIST at k = 2, 3, 5 classes, and PC on **EMNIST-Letters, 26 classes** | 99.91 / 99.46 / 98.92, and 72.14 on EMNIST-26 |
-| Navier–Stokes on **another dataset, different class count** | **EMNIST-Letters, 26 classes** — every fluid run (in `other/`) | 68.98 with transport, 64.82 with transport + HJB |
+| PC on a **different classification** than MNIST-10 | MNIST at k = 2, 3, 5, and PC on **EMNIST-Letters, 26 classes** | 99.91 / 99.46 / 98.92, and 72.14 on EMNIST-26 |
+| Navier–Stokes on **another dataset, different class count** | **EMNIST-Letters, 26 classes** — every fluid run (in [`other/`](other/)) | 68.98 with transport, 64.82 with transport + HJB |
 
-No Navier–Stokes run in this repo uses MNIST, and none uses 10 classes. The 10-class MNIST run is
-kept only as the reference point to measure against.
+No Navier–Stokes run uses MNIST, and none uses 10 classes. The 10-class MNIST run is kept only as
+the reference point to measure against.
 
-## What I found
+Plain PC, with no fluid and no HJB anywhere in the graph:
 
 | | |
 |---|---|
-| PC on full MNIST, zero backprop | **97.2%** (3 layers, local Hebbian updates only) |
-| PC update vs. the true backprop gradient | cosine **0.99999** — but only under the Fixed Prediction Assumption |
-| Strict PC at 8 hidden layers | cosine **0.756** and falling, costing 3.5 points of accuracy |
-| The PC–backprop gap vs. class count | widens to −4.36 at 26 classes, and the obvious explanation is *wrong* |
+| **MNIST, full 60k, 3 layers, no backprop** | **97.21%** |
+| cosine vs. the true backprop gradient, during training | 0.996 – 0.999 |
+| parameters / wall clock | 235k / 140s, CPU only |
 
-**The finding that contradicts the paper: the envelope theorem only holds if you freeze the top-down
-predictions.** Implemented strictly, as §4.2 specifies, PC converges to a fixed point that is *not*
-the backprop gradient, and shrinking the output nudge does not close the gap — because at the fixed
-point the state displacement and the error signal are both `O(γ)`, so the signal contaminates its own
-carrier at the same order. Freezing the predictions severs that feedback, and it is a one-line change.
+Across class counts, the comparison is deliberately **biased against PC**: backprop gets the best of
+a learning-rate sweep, PC runs at a single fixed setting.
 
-![alignment](figures/fig1_alignment.png)
+| classes | backprop | PC (no backprop) |
+|---|---|---|
+| 2 | 99.91 | **99.91** |
+| 3 | 99.30 | **99.46** |
+| 5 | 99.10 | 98.92 |
+| 10 | 96.28 | 95.36 |
+| 26 (EMNIST-Letters) | 76.50 | 72.14 |
 
-The full argument, with the experiment behind every number, is in
-**[docs/FINDINGS.md](docs/FINDINGS.md)**. If you want the ideas explained from first principles
-instead, read **[docs/UNDERSTANDING.md](docs/UNDERSTANDING.md)**.
-
-The In-Fluid-Net findings — the transport invariants, the κ warm-up, and the routing task where
-incompressible transport beats every baseline outright — are in
-[`other/docs/FINDINGS.md`](other/docs/FINDINGS.md).
+PC matches or beats backprop at k = 2 and k = 3. The gap widens with class count, and the obvious
+explanation for that turns out to be **wrong** — see [docs/FINDINGS.md](docs/FINDINGS.md) §3b, which
+records the hypothesis and the sweep that killed it.
 
 ## Running it
-
-Setup:
 
 ```bash
 uv venv --python 3.12 .venv
@@ -65,124 +146,52 @@ uv pip install --python .venv/bin/python -r requirements.txt \
     --extra-index-url https://download.pytorch.org/whl/cpu
 ```
 
-Every run is a single command. `make` on its own prints this list.
-
-**The task:**
+`make` on its own prints the full list.
 
 ```bash
-make classes    # PC across different class counts: 2 / 3 / 5 / 10        (~4 min)
-make emnist     # PC on EMNIST-Letters, 26 classes                        (~3 min)
-```
+make alignment  # THE COMPARISON: PC vs the true backprop gradient, strict vs fixed  (~3 min)
+make deep       # what the misalignment costs in accuracy, at 6 hidden layers        (~5 min)
 
-**The findings:**
+make classes    # PC across different class counts: 2 / 3 / 5 / 10                   (~4 min)
+make emnist     # PC on EMNIST-Letters, 26 classes                                   (~3 min)
 
-```bash
-make alignment  # PC vs the true backprop gradient, strict vs fixed       (~3 min)
-make deep       # what that misalignment costs in accuracy, at 6 layers   (~5 min)
-```
+make pc         # plain PC, MNIST 10 classes — the starting point                    (~2 min)
+make bp         # backprop, given the best of a learning-rate sweep                  (~1 min)
 
-**Reference points:**
-
-```bash
-make pc         # plain PC, MNIST 10 classes — the starting point         (~2 min)
-make bp         # backprop, given the best of a learning-rate sweep       (~1 min)
-```
-
-**Checks:**
-
-```bash
 make test       # locality, PC vs backprop, fluid invariants
 make figures    # rebuild figures/ from results/
-make lint       # ruff
 ```
 
-**The In-Fluid-Net work** (see [`other/README.md`](other/README.md)):
+Anything without a `make` target runs through `train.py` directly, which takes every component as a
+flag (`--prediction-mode`, `--num-classes`, `--output-nudge`, `--fluid`, … — `--help` lists them).
 
-```bash
-make fluid      # + Navier-Stokes, EMNIST-Letters, 26 classes             (~6 min)
-make hjb        # the same, + Hamilton-Jacobi-Bellman regularisation      (~7 min)
-make routing    # the paper's routing task, with the baselines it lacks   (~1 min)
-```
+## Documentation
 
-Anything not covered by a `make` target can be run through `train.py` directly, which takes the
-components as flags (`--fluid`, `--hjb`, `--projection`, `--obstacles`, `--prediction-mode`,
-`--num-classes`, and so on — `python train.py --help` lists them all).
-
-Every run prints what it is training, then a table per epoch:
-
-```
-  predictive coding  ·  fixed predictions (FPA)
-  ────────────────────────────────────────────────────────────────────────────
-  dataset       mnist  (10 classes, 784-dim)
-  network       784 -> 256 -> 128 -> 10   (235,146 params)
-  learning      lr 0.1 · nudge 0.2 · 24 inference steps · 10 epochs
-  extras        none (plain PC)
-  ────────────────────────────────────────────────────────────────────────────
-
-    epoch   test acc  free energy   cos(BP)     time
-    ─────  ─────────  ───────────  ────────  ───────
-        1     94.86%       0.1417    0.9962    13.8s
-```
-
-## How the code is laid out
-
-```
-influid_pc/
-  pc/            predictive coding      the mandatory part: no autograd, no backward chain
-  diagnostics/   the measurements that decide whether any of it works
-
-other/           the In-Fluid-Net work — not part of the presented result
-  fluid/         Navier-Stokes transport
-  regularizers/  HJB and transport penalties
-```
-
-**`pc/`** — Each layer holds a state, predicts the layer above, and computes a local error.
-Inference relaxes the states; learning is Hebbian (`ΔW ∝ error × presynaptic activity`). The linear
-connections never call autograd — I derived the update rules by hand — so "no backpropagation" is a
-property of the code and not a claim in a README. `tests/test_locality.py` patches `torch.autograd`
-to raise an exception and then trains the network to convergence anyway.
-
-I wrote it twice, deliberately, and the two agree:
-
-* `pc/core.py` — one self-contained class. **Start here.** The whole algorithm is ~150 lines with
-  the mathematics in the docstring, and it imports nothing else from this repo.
-* `pc/network.py` + `pc/connections.py` — the same algorithm with every edge behind a `Connection`
-  interface, which is what lets an arbitrary module drop in without the PC rules changing at all.
-  `train.py` uses this one.
-
-The inference mode is the switch that carries my main finding:
-
-* `--prediction-mode strict` — predictions recomputed from the relaxed states each step.
-* `--prediction-mode fixed` — predictions frozen at their feedforward values (the Fixed Prediction
-  Assumption, Millidge et al. 2020). **This is the one that recovers the backprop gradient.**
-
-**`diagnostics/`** — `bp_alignment.py` measures the cosine between the PC update and the true
-backprop gradient. Its backprop reference is a hand-written backward sweep over the same forward
-equations, so the comparison is between two learning rules on one model rather than two models;
-`test_backprop_reference_matches_autograd` checks that reference against autograd.
-
-**`other/`** — The paper's transport layer, its regularisers, the routing task, and their tests and
-figures. It is imported only when `--fluid` asks for it, so nothing on the PC path depends on it.
-
-## Removing any of it
-
-I built the components so they come out cleanly. The defaults are the minimum:
-
-| to drop | do this |
+| | |
 |---|---|
-| Navier–Stokes transport | omit `--fluid` (off by default) |
-| HJB regularisation | omit `--hjb` (off by default) |
-| transport regularisers | `--transport-alpha 0 --transport-beta 0` |
-| Leray projection | omit `--projection` (off by default, and a no-op in stream mode anyway) |
-| everything except PC | `python train.py --dataset mnist` |
+| **[docs/FINDINGS.md](docs/FINDINGS.md)** | the full argument, with the experiment behind every number |
+| **[docs/UNDERSTANDING.md](docs/UNDERSTANDING.md)** | the ideas from first principles, if you want the *why* rather than the result |
 
-Deleting `other/` outright still leaves a working predictive-coding implementation, because nothing
-in `pc/` imports it.
+## The In-Fluid-Net half
+
+The task also asked for Navier–Stokes, and it is implemented in full — transport as a network layer,
+Helmholtz–Hodge projection, HJB regularisation, and the paper's routing task with the baselines it
+does not report. It lives in **[`other/`](other/)** with its own README, findings and tests, so that
+the result above is not tangled with it.
+
+It is separated because it was not what I presented, not because it is unfinished. It still runs
+(`make fluid`, `make routing`) and its invariant suite runs as part of `make test`. `build.py`
+imports it lazily, so deleting `other/` leaves a working predictive-coding implementation.
+
+Short version of what is in there: the transport machinery is exact (mass drift `<1e-12`, `div u`
+zero by algebraic identity), it **wins decisively at routing** — 54% of the budget delivered vs
+0.35% for diffusion — and it is **strictly dominated at classification**, where a plain layer of the
+same size beats it 21× faster.
 
 ## References
 
 Goertzel, B. *Incompressible-Fluid Networks* (v1, October 2025).
 Millidge, B., Tschantz, A., Buckley, C. L. *Predictive Coding Approximates Backprop along Arbitrary
-Computation Graphs* (2020).
+Computation Graphs* (2020) — the Fixed Prediction Assumption is §2.
 Whittington, J. C. R., Bogacz, R. *An Approximation of the Error Backpropagation Algorithm in a
 Predictive Coding Network with Local Hebbian Synaptic Plasticity* (2017).
