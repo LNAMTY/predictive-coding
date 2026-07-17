@@ -43,6 +43,12 @@ class PCNetwork:
     def logits(self, x: Tensor) -> Tensor:
         return self.forward(x)[-1]
 
+    def _zero_init(self, x: Tensor) -> List[Tensor]:
+        states = [x]
+        for c in self.conns:
+            states.append(torch.zeros(x.shape[0], c.out_dim, device=x.device))
+        return states
+
     def errors(self, states: List[Tensor], preds: Optional[List[Tensor]] = None) -> List[Tensor]:
         errs: List[Tensor] = [torch.zeros_like(states[0])]
         for l, c in enumerate(self.conns):
@@ -68,7 +74,7 @@ class PCNetwork:
         fixed = cfg.prediction_mode == "fixed"
 
         ff = self.forward(x)
-        states = [s.clone() for s in ff]
+        states = [s.clone() for s in ff] if cfg.ff_init else self._zero_init(x)
         if target is not None:
             states[-1] = states[-1] + cfg.output_nudge * (target - states[-1])
 
