@@ -27,8 +27,12 @@ output nudge `γ → 0` the cosine should go to 1.
 |---|---|---|
 | 1.0 | 0.9722 | 0.9779 |
 | 0.1 | 0.9858 | 0.9998 |
-| 0.01 | 0.9859 | **1.000000** |
-| 0.001 | **0.9859 — plateau** | **1.000000** |
+| 0.01 | 0.9859 | **1.0000** |
+| 0.001 | **0.9859 — plateau** | **1.0000** |
+
+The study prints the fixed-prediction cosine as `1.000002` at γ=0.01 and `1.000004` at γ=0.001. A
+cosine cannot exceed 1; that overshoot is float32 accumulation, and it is what exact looks like in
+floating point.
 
 Strict PC **never gets there**. Inference is genuinely converged in both cases — the fixed-point
 residual falls to `~1e-6` — strict PC simply converges somewhere else, and shrinking `γ` does not

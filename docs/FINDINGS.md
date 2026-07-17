@@ -30,8 +30,11 @@ so as the output nudge `γ → 0` the cosine should go to 1.
 |---|---|---|
 | 1.0   | 0.9722 | 0.9779 |
 | 0.1   | 0.9858 | 0.9998 |
-| 0.01  | 0.9859 | **1.000000** |
-| 0.001 | **0.9859 (plateau)** | **1.000000** |
+| 0.01  | 0.9859 | **1.0000** |
+| 0.001 | **0.9859 (plateau)** | **1.0000** |
+
+(The study prints `1.000002` and `1.000004` for those two cells. A cosine cannot exceed 1 — that is
+float32 accumulation, i.e. exact to the precision the run is carried out in.)
 
 Inference is genuinely converged in both cases — the fixed-point residual falls to `~1e-6`. Strict
 PC simply converges *somewhere else*.
