@@ -13,7 +13,8 @@ from typing import Dict
 import torch
 from torch import Tensor
 
-from ..pc.connections import ModuleConnection
+from influid_pc.pc.connections import ModuleConnection
+
 from .layer import IncompressibleRouting
 
 

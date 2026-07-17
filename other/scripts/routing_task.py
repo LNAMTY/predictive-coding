@@ -31,8 +31,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from influid_pc.fluid.advection import advect, renormalise, total_mass
-from influid_pc.fluid.operators import (
+from other.fluid.advection import advect, renormalise, total_mass
+from other.fluid.operators import (
     cfl_number,
     curl_from_stream,
     divergence,
@@ -40,7 +40,7 @@ from influid_pc.fluid.operators import (
     node_mask_from_cells,
     rescale_to_cfl,
 )
-from influid_pc.fluid.projection import leray_project
+from other.fluid.projection import leray_project
 
 ROOT = Path(__file__).resolve().parent.parent
 G, T, DT = 24, 240, 0.5
@@ -263,7 +263,7 @@ def main() -> None:
     fig.tight_layout()
     (ROOT / "figures").mkdir(exist_ok=True)
     fig.savefig(ROOT / "figures" / "fig5_routing_task.png", dpi=170, bbox_inches="tight")
-    print("wrote figures/fig5_routing_task.png")
+    print("wrote other/figures/fig5_routing_task.png")
 
 
 if __name__ == "__main__":

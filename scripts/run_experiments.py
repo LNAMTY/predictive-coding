@@ -4,10 +4,11 @@
                     accuracy as the network deepens. PC-strict vs PC-fixed vs BP.
   exp2  classes:    predictive coding across class counts on MNIST (k = 2, 3, 5, 10).
   exp3  transfer:   a non-MNIST dataset with a different class count (EMNIST-Letters,
-                    26 classes), with and without the fluid transport layer.
-  exp4  fluid:      ablations of the In-Fluid-Net machinery itself.
+                    26 classes).
 
 Run:  PYTHONPATH=. .venv/bin/python scripts/run_experiments.py [exp1 exp2 ...]
+
+The transport-layer grid lives in other/scripts/run_fluid_experiments.py.
 """
 
 from __future__ import annotations
@@ -81,71 +82,26 @@ def exp2_classes() -> None:
             num_classes=k, **common)
 
 
-# -- exp3: non-MNIST dataset, different class count, +/- fluid -----------------
+# -- exp3: non-MNIST dataset, different class count -----------------------------
 
 def exp3_transfer() -> None:
-    print("[exp3] EMNIST-Letters (26 classes), with and without transport")
+    print("[exp3] EMNIST-Letters (26 classes)")
     common = dict(
         dataset="emnist_letters", train_subset=20000, test_subset=5000,
         weight_lr=0.1, output_nudge=0.2, hidden=[128],
     )
     run("exp3-emnist-bp", learner="bp", epochs=8, **common)
     run("exp3-emnist-pc", learner="pc", prediction_mode="fixed", epochs=8, **common)
-    run("exp3-emnist-pc-fluid", learner="pc", prediction_mode="fixed", epochs=4,
-        fluid=True, fluid_lr=0.01, **common)
-    run("exp3-emnist-pc-fluid-hjb", learner="pc", prediction_mode="fixed", epochs=4,
-        fluid=True, fluid_lr=0.01, hjb=True, **common)
 
-    # Same comparison on Fashion-MNIST, to check it is not an EMNIST artefact.
+    # Same dataset swap on Fashion-MNIST, to check it is not an EMNIST artefact.
     fcommon = dict(common, dataset="fashion")
     run("exp3-fashion-pc", learner="pc", prediction_mode="fixed", epochs=8, **fcommon)
-    run("exp3-fashion-pc-fluid", learner="pc", prediction_mode="fixed", epochs=4,
-        fluid=True, fluid_lr=0.01, **fcommon)
-
-
-# -- exp4: In-Fluid-Net ablations ----------------------------------------------
-
-def exp4_fluid() -> None:
-    print("[exp4] fluid ablations")
-    base = dict(
-        dataset="mnist", train_subset=8000, test_subset=2000, epochs=3,
-        learner="pc", prediction_mode="fixed", hidden=[128],
-        weight_lr=0.1, output_nudge=0.2, fluid=True, fluid_lr=0.01,
-    )
-    run("exp4-base", **base)
-
-    # The paper's recommended diffusion warmup.
-    for kappa in (0.0, 0.1, 0.3):
-        run(f"exp4-kappa{kappa}", **dict(base, fluid_kappa=kappa))
-
-    # The residual wrapper, which is what makes the layer safe to insert at all.
-    run("exp4-no-residual", **dict(base, no_residual=True, readout="log"))
-
-    # CFL band: too small and nothing moves, too large and the integrator degrades.
-    for cfl in (0.05, 0.9):
-        run(f"exp4-cfl{cfl}", **dict(base, fluid_cfl=cfl))
-
-    # HJB regulariser and obstacles.
-    run("exp4-hjb", **dict(base, hjb=True))
-    run("exp4-obstacles", **dict(base, obstacles=True))
-
-    # Not run end-to-end: velocity_mode="value" and projection=True.
-    #
-    # Both force a Poisson solve, and under the Fixed Prediction Assumption each of the
-    # 24 inference steps asks for a VJP, costing another solve in the projector's
-    # backward. That is ~20x slower than the rest of this grid for no new information:
-    # the projector annihilates the raw-gradient drift (retained_energy = 0.0000,
-    # measured in the layer), the transport term is identically zero, and the residual
-    # layer degenerates to the identity. scripts/routing_task.py shows the collapse more
-    # sharply, where the same drift, built from the ideal value function, delivers
-    # 0.0000 band mass against the stream function's 0.5400.
 
 
 EXPERIMENTS = {
     "exp1": exp1_depth,
     "exp2": exp2_classes,
     "exp3": exp3_transfer,
-    "exp4": exp4_fluid,
 }
 
 

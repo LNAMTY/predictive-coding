@@ -8,4 +8,7 @@ __pycache__/
 results/*.json
 !results/exp*.json
 !results/alignment.json
-!results/routing_task.json
+
+other/results/*.json
+!other/results/exp*.json
+!other/results/routing_task.json

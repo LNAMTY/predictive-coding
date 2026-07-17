@@ -3,15 +3,15 @@ positivity, no-through obstacles, CFL targeting, and the projector's backward pa
 
 import torch
 
-from influid_pc.fluid.advection import advect, renormalise, total_mass
-from influid_pc.fluid.operators import (
+from other.fluid.advection import advect, renormalise, total_mass
+from other.fluid.operators import (
     cfl_number,
     curl_from_stream,
     divergence,
     node_mask_from_cells,
     rescale_to_cfl,
 )
-from influid_pc.fluid.projection import leray_project
+from other.fluid.projection import leray_project
 
 torch.manual_seed(0)
 B, H, W = 4, 24, 24
@@ -91,7 +91,7 @@ def test_leray_projection_removes_divergence():
 
 def test_projection_annihilates_a_pure_gradient_field():
     """The paper's warning: project a raw gradient field and almost nothing survives."""
-    from influid_pc.fluid.operators import gradient
+    from other.fluid.operators import gradient
 
     phi = torch.randn(B, H, W, dtype=torch.float64)
     gx, gy = gradient(phi)
@@ -106,7 +106,7 @@ def test_leray_custom_backward_matches_autograd_through_the_solver():
     necessarily differentiate to the right thing, so it is a reference rather than the
     ground truth. Finite differences is the ground truth.
     """
-    from influid_pc.fluid.projection import _project_raw, _zero_boundary_faces, leray_project
+    from other.fluid.projection import _project_raw, _zero_boundary_faces, leray_project
 
     torch.manual_seed(0)
 

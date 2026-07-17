@@ -1,4 +1,8 @@
-"""Assemble a network from flags. Every component is independently removable."""
+"""Assemble a network from flags. Every component is independently removable.
+
+The transport layer lives in `other/`, outside the predictive-coding package, and is
+imported only when `--fluid` asks for it. Nothing on the PC path depends on it.
+"""
 
 from __future__ import annotations
 
@@ -7,8 +11,6 @@ from typing import List
 
 import torch
 
-from .fluid.connection import FluidConnection
-from .fluid.layer import IncompressibleRouting
 from .pc.connections import Connection, LinearConnection
 from .pc.network import PCNetwork, PCTrainConfig
 
@@ -73,6 +75,9 @@ def build(spec: ModelSpec, cfg: PCTrainConfig, device: str = "cpu") -> PCNetwork
                 )
             )
         return PCNetwork(conns, cfg)
+
+    from other.fluid.connection import FluidConnection
+    from other.fluid.layer import IncompressibleRouting
 
     # With the fluid layer, one hidden layer is the GxG transport grid.
     g = spec.fluid_grid
